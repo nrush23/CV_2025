@@ -12,14 +12,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--Frames", type=int, help="Number of frames to run the training game simulation")
     parser.add_argument("-v", "--View", action='store_true', help="Visualize the training game simulation")
+    parser.add_argument("-p", "--Play", action='store_true', help="Determines whether the user plays or not")
     args = parser.parse_args()
 
     #Command line arguments
     FRAMES = args.Frames if args.Frames else 10
     VIEW = args.View if args.View else True
+    PLAY = args.Play if args.Play else False
 
     #Run the pong for FRAMES amount of frames (defaults to 10)
-    game = Pong(VIEW)
+    game = Pong(VIEW, PLAY)
     game.visualize(FRAMES)
 
 if __name__ == "__main__":
