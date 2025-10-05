@@ -16,7 +16,7 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
     - ```pip install -r requirements.txt```
 7. To run any file:
     - ```python file_name.py```  
-   To run the main file:
+To run the main file:
     - ```python main.py [-f FRAMES]```
 8. When finished, deactivate your environment:
     - ```deactivate```
