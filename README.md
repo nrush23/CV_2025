@@ -2,17 +2,17 @@
 Computer Vision Fall 2025 project for generating frames of Pong or Tetris based off of key board actions in real time.
 
 ## Setup
-- Clone a copy of this repository to your local machine
-- Open a terminal and navigate to the CV_2025 folder
-- Once inside the CV_2025 folder, make a new python environment (this creates a new environment named venv):
+1. Clone a copy of this repository to your local machine
+2. Open a terminal and navigate to the CV_2025 folder
+3. Once inside the CV_2025 folder, make a new python environment (this creates a new environment named venv):
     - ``` python -m venv venv ```
-- Activate your environment:
+4. Activate your environment:
     - Windows: ```.\venv\Scripts\activate```
     - Mac: ```source venv/bin/activate```
-- Once your environment is activated, you should see:
+5. Once your environment is activated, you should see:
     - Windows: ```(venv) C:\...your folder path...```
     - Mac: ```(venv) ... $```
-- Now install the required libraries:
+6. Now install the required libraries:
     - ```pip install -r requirements.txt```
     
 Add any additional required libraries to the requirements.txt file
