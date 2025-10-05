@@ -15,7 +15,7 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
 6. Now install the required libraries:
     - ```pip install -r requirements.txt```
 7. Run commands:
-    - Main file: `python main.py [-f FRAMES] [-v]`
+    - Main file: `python main.py [-f FRAMES] [-v] [-h]`
     - Any file: `python file_name.py`
 8. When finished, deactivate your environment:
     - ```deactivate```
@@ -39,5 +39,6 @@ Add any additional required libraries to the requirements.txt file
 ## Similar Models
 - Oasis Model: https://oasis-model.github.io/
 - MineWorld: https://github.com/microsoft/mineworld
+- Atari World Modeling: https://arxiv.org/pdf/2405.12399
 
 
