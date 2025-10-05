@@ -5,7 +5,9 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
 - Clone a copy of this repository to your local machine
 - Open a terminal and navigate to the CV_2025 folder
 - Once inside the CV_2025 folder, make a new python environment (this creates a new environment named venv):
-    - python -m venv venv
+    - ```
+    python -m venv venv
+    ```
 - Activate your environment:
     - Windows: .\venv\Scripts\activate
     - Mac: source venv/bin/activate
