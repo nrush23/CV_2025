@@ -1,0 +1,26 @@
+import argparse
+from pong import Pong
+
+def main():
+    """ Load Pong and our model to begin training
+
+        Command Line Arguments:
+        -f || --Frames --> type int, how many frames we run ALE Pong for (Default 10)
+        -v || --View --> bool flag, do you want to see the human view (Default true)
+    """
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-f", "--Frames", type=int, help="Number of frames to run the training game simulation")
+    parser.add_argument("-v", "--View", action='store_true', help="Visualize the training game simulation")
+    args = parser.parse_args()
+
+    #Command line arguments
+    FRAMES = args.Frames if args.Frames else 10
+    VIEW = args.View if args.View else True
+
+    #Run the pong for FRAMES amount of frames (defaults to 10)
+    game = Pong(VIEW)
+    game.visualize(FRAMES)
+
+if __name__ == "__main__":
+    main()

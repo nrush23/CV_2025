@@ -10,10 +10,16 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
     - Windows: ```.\venv\Scripts\activate```
     - Mac: ```source venv/bin/activate```
 5. Once your environment is activated, you should see:
-    - Windows: ```(venv) C:\...your folder path...```
+    - Windows: ```(venv) C:\...your folder path...>```
     - Mac: ```(venv) ... $```
 6. Now install the required libraries:
     - ```pip install -r requirements.txt```
+7. To run any file:
+    - ```python file_name.py```
+   To run the main file:
+    - ```python main.py [-f FRAMES]```
+8. When finished, deactivate your environment:
+    - ```deactivate```
     
 Add any additional required libraries to the requirements.txt file
 
