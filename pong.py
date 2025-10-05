@@ -4,7 +4,7 @@ import ale_py
 
 class Pong:
     """ Pong interface for accessing and interacting the ALE Gymnasium Pong model """
-    def __init__(self, VIEW):
+    def __init__(self, VIEW=True):
         gymnasium.register_envs(ale_py)
         render_mode = "human" if VIEW else "rgb_array"
         self.env = gymnasium.make("ALE/Pong-v5", render_mode=render_mode)
