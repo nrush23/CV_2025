@@ -8,10 +8,10 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
     - ALE models: https://ale.farama.org/environments/
 
 - [ ] Pick our transformer encoder model and implement in using PyTorch
-    -ViT
+    - ViT
 
 - [ ] Pick our transformer decoder model and implement using PyTorch.
-    -DiT
+    - DiT
 
 - [ ] Get comfortable on HPC Greene and do a test train.
 
