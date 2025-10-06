@@ -257,55 +257,55 @@ def encode_pong_observation(encoder, obs):
 # ============ 使用範例 ============
 if __name__ == "__main__":
     print("=" * 60)
-    print("Pong Encoder 測試")
+    print("Pong Encoder Test")
     print("=" * 60)
     
     # 創建 encoder
     encoder = create_encoder()
     encoder.eval()
     
-    print(f"\n📊 Encoder 架構資訊:")
-    print(f"- 輸入畫面大小: 210×160×3")
+    print(f"\n📊 Encoder Architecture Information:")
+    print(f"- Input frame size: 210×160×3")
     print(f"- Patch 大小: 14×14")
-    print(f"- Patches 數量: {encoder.patch_embed.n_patches_h}×{encoder.patch_embed.n_patches_w} = {encoder.patch_embed.n_patches}")
-    print(f"- Embedding 維度: {encoder.embed_dim}")
-    print(f"- Transformer 層數: {len(encoder.blocks)}")
-    print(f"- 潛在向量維度: {encoder.latent_dim}")
-    print(f"- 總參數量: {sum(p.numel() for p in encoder.parameters()):,}")
+    print(f"- Number of patches: {encoder.patch_embed.n_patches_h}×{encoder.patch_embed.n_patches_w} = {encoder.patch_embed.n_patches}")
+    print(f"- Embedding dimension: {encoder.embed_dim}")
+    print(f"- Number of Transformer layers: {len(encoder.blocks)}")
+    print(f"- Latent vector dimension: {encoder.latent_dim}")
+    print(f"- Total parameters: {sum(p.numel() for p in encoder.parameters()):,}")
     
     # 測試編碼
     print("\n" + "=" * 60)
-    print("🧪 測試編碼過程")
+    print("🧪 Encoding Process Test")
     print("=" * 60)
     
     # 測試正確的畫面大小
     dummy_frame = torch.randn(1, 3, 210, 160)
-    print(f"\n輸入形狀: {dummy_frame.shape}")
+    print(f"\nInput shape: {dummy_frame.shape}")
     
     latent = encoder(dummy_frame)
-    print(f"✅ 編碼成功！")
-    print(f"輸出潛在表示形狀: {latent.shape}")
+    print(f"✅ Encoding successful!")
+    print(f"Output latent representation shape: {latent.shape}")
     print(f"  - Batch size: {latent.shape[0]}")
-    print(f"  - Patches 數量: {latent.shape[1]}")
-    print(f"  - 潛在向量維度: {latent.shape[2]}")
+    print(f"  - Number of patches: {latent.shape[1]}")
+    print(f"  - Latent vector dimension: {latent.shape[2]}")
     
     # 測試單一畫面編碼
     print("\n" + "=" * 60)
-    print("🎮 測試 Pong 畫面編碼")
+    print("🎮 Pong Frame Encoding Test")
     print("=" * 60)
     
     frame_np = np.random.randint(0, 255, (210, 160, 3), dtype=np.uint8)
-    print(f"\n模擬 Pong 畫面形狀: {frame_np.shape}")
+    print(f"\nSimulated Pong frame shape: {frame_np.shape}")
     
     latent_single = encode_pong_observation(encoder, frame_np)
-    print(f"✅ 編碼成功！")
-    print(f"潛在表示形狀: {latent_single.shape}")
-    print(f"\n潛在表示統計:")
+    print(f"✅ Encoding successful!")
+    print(f"Latent representation shape: {latent_single.shape}")
+    print(f"\nLatent representation statistics:")
     print(f"  - Mean: {latent_single.mean().item():.4f}")
     print(f"  - Std: {latent_single.std().item():.4f}")
     print(f"  - Min: {latent_single.min().item():.4f}")
     print(f"  - Max: {latent_single.max().item():.4f}")
     
     print("\n" + "=" * 60)
-    print("✅ 所有測試通過！Encoder 已就緒")
+    print("✅ All tests passed! Encoder is ready")
     print("=" * 60)
