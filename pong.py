@@ -24,10 +24,10 @@ class Pong:
         # 初始化 encoder（如果需要）
         self.use_encoder = use_encoder
         if self.use_encoder:
-            print("初始化 ViT Encoder...")
+            print("Initializing ViT Encoder...")
             self.encoder = create_encoder()
             self.encoder.eval()  # 設定為評估模式
-            print("✅ Encoder 已就緒")
+            print("✅ Encoder is ready")
             
             # 用於儲存編碼後的觀察值
             self.encoded_observations = []
@@ -45,7 +45,7 @@ class Pong:
                 
                 # 每 100 幀顯示一次編碼資訊
                 if i % 100 == 0:
-                    print(f"Frame {i}: 潛在表示形狀 = {latent.shape}")
+                    print(f"Frame {i}: Latent representation shape = {latent.shape}")
             
             # 獲取動作
             action = self.getPlay() if self.PLAY else self.getAction(obs)
@@ -59,20 +59,20 @@ class Pong:
         print(f"Finished running PONG for: {FRAMES} frames")
         
         if self.use_encoder:
-            print(f"收集了 {len(self.encoded_observations)} 個編碼觀察值")
+            print(f"{len(self.encoded_observations)} observations were collected and encoded.")
             self.save_encoded_observations()
 
     def save_encoded_observations(self, filename="encoded_observations.pt"):
         """儲存編碼後的觀察值供後續訓練使用"""
         if not self.encoded_observations:
-            print("沒有編碼觀察值可以儲存")
+            print("No observations were collected and encoded.")
             return
         
         # 將所有觀察值堆疊成一個 tensor
         encoded_tensor = torch.cat(self.encoded_observations, dim=0)
         torch.save(encoded_tensor, filename)
-        print(f"✅ 已儲存編碼觀察值到 {filename}")
-        print(f"   形狀: {encoded_tensor.shape}")
+        print(f"✅ Saved encoded observations to {filename}")
+        print(f"   Shape: {encoded_tensor.shape}")
 
     def getAction(self, obs):
         """
@@ -107,7 +107,7 @@ class Pong:
 # ============ 使用範例 ============
 if __name__ == "__main__":
     print("=" * 60)
-    print("Pong with ViT Encoder 測試")
+    print("Pong with ViT Encoder Test")
     print("=" * 60)
     
     # 創建 Pong 實例並啟用 encoder
@@ -116,4 +116,4 @@ if __name__ == "__main__":
     # 運行 300 幀以收集編碼數據
     game.visualize(FRAMES=300)
     
-    print("\n✅ 測試完成！")
+    print("\n✅ Test completed!")
