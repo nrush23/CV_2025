@@ -16,7 +16,7 @@ class Pong:
             "ALE/Pong-v5", render_mode=render_mode, frameskip=1, repeat_action_probability=0.0)
         self.env.reset()
         self.PLAY = PLAY
-        self.PREV = np.empty((1, 1), dtype=int)
+        self.PREV = None
 
     def visualize(self, FRAMES=10):
         """Runs Pong at 30FPS for FRAMES amount of frames
@@ -36,21 +36,42 @@ class Pong:
         self.env.close()
         print("Finished running PONG for: %i frames" % FRAMES)
 
-    # ---------------------------- TO DO -------------------------------#
-    #     Implement getAction so that it finds the pong square and     #
-    #     automatically calculates the best move to make from there    #
-    # ------------------------------------------------------------------#
-
     def getAction(self, obs):
-        """Automatically get best action by calculating the position of the ball and moving towards it """
+        """Automatically get best action by calculating the position of the BALL when it intercepts the PADDLE and moving towards it """
+
+        # Get boundary positions of each: [top left corner, bottom right corner]
         BALL = self.getBallDimension(obs)
         PADDLE = self.getPaddleDimension(obs)
 
         if (BALL is not None and PADDLE is not None):
-            print(BALL)
-            print(PADDLE)
 
-        return self.env.action_space.sample()
+            # Calculate the center of each object: [TOP_CORNER + BOTTOM_CORNER] / 2
+            BALL_CENTER = np.add(BALL[0], BALL[1]) / 2
+            PADDLE_CENTER = np.add(PADDLE[0], PADDLE[1]) / 2
+
+            # ------------------------------------  PHYSICS LOGIC  ------------------------------------- #
+            #                                                                                            #
+            #  Calculate where the BALL will intercept the PADDLE's X-COORD and move towards that point  #
+            #  Math:   -We use this equation:                                                            #
+            #              C_NEW = C_PREV + V_C * TIME (where C == Coordinate, V == Velocity)            #
+            #          -Rearrange to solve for the TIME the BALL intercepts the PADDLE X-COORD (141.5):  #
+            #              TIME = (X_NEW - X_PREV) / V_X                                                 #
+            #          -Now solve for the BALL's Y-COORD at that TIME:                                   #
+            #              Y_HIT = Y_PREV + V_Y * TIME                                                   #
+            #  Note: PADDLE's X-COORD is always 141.5                                                    #
+            # ------------------------------------------------------------------------------------------ #
+
+            if (self.PREV is not None):
+                V = np.subtract(BALL_CENTER, self.PREV)
+                if (V[1] > 0.001):
+                    TIME = (141.5 - BALL_CENTER[1]) / V[1]
+                    Y_HIT = BALL_CENTER[0] + V[0]*TIME
+                    if (Y_HIT > PADDLE_CENTER[0]):
+                        return 3
+                    elif (Y_HIT < PADDLE_CENTER[0]):
+                        return 2
+            self.PREV = BALL_CENTER
+        return 0
 
     def getBallDimension(self, obs):
         """Given a current RGB stream of the pixels, identify the location of the ball. Note: The ball doesn't seem to generate until the 60th frame"""
@@ -70,13 +91,13 @@ class Pong:
         ball_mask = ~np.isin(indices[:, 0], BORDER_X)
         BALL = indices[ball_mask]
 
-        # Print the BALL when it exists
+        # Return the top left corner and bottom right corner of the BALL if it exists
         if (BALL.size > 0):
             return np.array([BALL[0, :], BALL[BALL.shape[0]-1, :]])
         return None
 
     def getPaddleDimension(self, obs):
-        """Helper function to determine the position of the GREEN Paddle"""
+        """Helper function to determine the position of the GREEN Paddle. Note: GREEN paddle seems to load on the 3rd frame"""
         # The color of the GREEN paddle is rgb(92, 186, 92) and nothing GREEN appears below the top border
         COLOR = np.array([92, 186, 92])
         BORDER_X = 33
