@@ -44,6 +44,11 @@ class Pong:
     def getAction(self, obs):
         """Automatically get best action by calculating the position of the ball and moving towards it """
         BALL = self.getBallDimension(obs)
+        PADDLE = self.getPaddleDimension(obs)
+
+        if (BALL is not None and PADDLE is not None):
+            print(BALL)
+            print(PADDLE)
 
         return self.env.action_space.sample()
 
@@ -51,29 +56,40 @@ class Pong:
         """Given a current RGB stream of the pixels, identify the location of the ball. Note: The ball doesn't seem to generate until the 60th frame"""
         COLOR = 236  # The color of the ball is RGB(236, 236, 236)
 
-        #I looked at how the pixels changed from frame to frame, these consistently stayed the same so they must be the white borders
+        # I looked at how the pixels changed from frame to frame, these consistently stayed the same so they must be the white borders
         BORDER_X = np.array([24,  25,  26,  27,  28,  29,  30,  31,  32,  33, 194, 195, 196, 197, 198, 199, 200, 201,
                              202, 203, 204, 205, 206, 207, 208, 209])
-        
-        #Get a mask where the values match our color
+
+        # Get a mask where the values match our color
         color_mask = (obs == COLOR).all(axis=2)
 
-        #Apply the mask to only get the indices that are rgb(COLOR, COLOR, COLOR)
+        # Apply the mask to only get the indices that are rgb(COLOR, COLOR, COLOR)
         indices = np.argwhere(color_mask)
 
-        #The ball is coordinates not in the BORDER
-        ball_mask = ~np.isin(indices[:,0], BORDER_X)
+        # The ball is coordinates not in the BORDER
+        ball_mask = ~np.isin(indices[:, 0], BORDER_X)
         BALL = indices[ball_mask]
 
-        #Print the BALL when it exists
-        if (BALL.size > 0 ):
-            print(BALL)
-            return np.array([indices[0,:], indices[8,:]])
+        # Print the BALL when it exists
+        if (BALL.size > 0):
+            return np.array([BALL[0, :], BALL[BALL.shape[0]-1, :]])
         return None
-    
+
     def getPaddleDimension(self, obs):
         """Helper function to determine the position of the GREEN Paddle"""
-        return
+        # The color of the GREEN paddle is rgb(92, 186, 92) and nothing GREEN appears below the top border
+        COLOR = np.array([92, 186, 92])
+        BORDER_X = 33
+
+        color_mask = (obs == COLOR).all(axis=2)
+        indices = np.argwhere(color_mask)
+
+        paddle_mask = indices[:, 0] > BORDER_X
+        PADDLE = indices[paddle_mask]
+
+        if (PADDLE.size > 0):
+            return np.array([PADDLE[0, :], PADDLE[PADDLE.shape[0]-1, :]])
+        return None
 
     def getPlay(self):
         """If player controlled, check keyboard inputs for actions"""
