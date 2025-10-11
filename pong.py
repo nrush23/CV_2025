@@ -9,7 +9,7 @@ np.set_printoptions(threshold=sys.maxsize)
 class Pong:
     """ Pong interface for accessing and interacting the ALE Gymnasium Pong model """
 
-    def __init__(self, VIEW=True, PLAY=False):
+    def __init__(self, VIEW=True, PLAY=False, EPS=0.01):
         gymnasium.register_envs(ale_py)
         render_mode = "human" if (VIEW or PLAY) else "rgb_array"
         self.env = gymnasium.make(
@@ -17,6 +17,7 @@ class Pong:
         self.env.reset()
         self.PLAY = PLAY
         self.PREV = None
+        self.EPS = EPS
 
     def visualize(self, FRAMES=10):
         """Runs Pong at 30FPS for FRAMES amount of frames
@@ -26,7 +27,13 @@ class Pong:
         # Frame rate is 30FPS, so simulation will run for FRAMES/30 seconds
         for _ in range(FRAMES):
             obs = self.env.unwrapped.get_wrapper_attr("ale").getScreenRGB()
-            action = self.getPlay() if self.PLAY else self.getAction(obs)
+            # action = self.getPlay() if self.PLAY else self.getAction(obs)
+            if (self.PLAY):
+                action = self.getPlay()
+            else:
+                action = self.getAction(obs)
+                if (np.random.rand() < self.EPS):
+                    action = self.env.action_space.sample()
 
             obs, reward, terminated, truncated, info = self.env.step(action)
 

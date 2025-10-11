@@ -13,15 +13,17 @@ def main():
     parser.add_argument("-f", "--Frames", type=int, help="Number of frames to run the training game simulation")
     parser.add_argument("-v", "--View", action='store_true', help="Visualize the training game simulation")
     parser.add_argument("-p", "--Play", action='store_true', help="Determines whether the user plays or not")
+    parser.add_argument("-e", "--Epsilon", type=float, help="Epsilon value for Computer to randomly choose a different move")
     args = parser.parse_args()
 
     #Command line arguments
     FRAMES = args.Frames if args.Frames else 10
     VIEW = args.View if args.View else True
     PLAY = args.Play if args.Play else False
+    EPS = args.Epsilon if args.Epsilon else 0.01
 
     #Run the pong for FRAMES amount of frames (defaults to 10)
-    game = Pong(VIEW, PLAY)
+    game = Pong(VIEW, PLAY, EPS)
     game.visualize(FRAMES)
 
 if __name__ == "__main__":
