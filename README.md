@@ -28,7 +28,7 @@ Add any additional required libraries to the requirements.txt file
 
 ## To Do (Try to have basic setups for next weekend)
 
-- [ ] Set up a Pong model to be used within our model. This should have an API to be used within our pipeline to move the paddle.
+- [ x ] Set up a Pong model to be used within our model. This should have an API to be used within our pipeline to move the paddle.
     - ALE Gymnaisum Pong API: https://ale.farama.org/environments/pong/
     - ALE models: https://ale.farama.org/environments/
 
