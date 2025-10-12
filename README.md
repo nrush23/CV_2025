@@ -26,19 +26,32 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
     
 Add any additional required libraries to the requirements.txt file
 
-## To Do (Try to have basic setups for next weekend)
+## To Do (Need to do ASAP)
 
-- [ x ] Set up a Pong model to be used within our model. This should have an API to be used within our pipeline to move the paddle.
-    - ALE Gymnaisum Pong API: https://ale.farama.org/environments/pong/
-    - ALE models: https://ale.farama.org/environments/
+- [ ] Set up actual training loop. This should happen in the main or be called in there through an external class like train.py
+    - This loop should instantiate our actual model, determine batch size, send and receive inputs to the Pong interface, and train for a specified amount of epochs.
+    - Should track loss over time and generate a matplotlib graph with optional dashboarding from Pytorch.
+    - Should have a section for inference which does not use gradients
+- [ ] Extract frames from the Pong interface:
+    - Right now, we have a Pong class which allows games to be visualized from computer choices or player choices as a demo. We need to implement additional separation or a new function to generate and return the next frame based on deciding the current action from the current frame.
+- [ ] Finish implementing the model 
 
-- [ ] Pick our transformer encoder model and implement in using PyTorch
-    - ViT
-
-- [ ] Pick our transformer decoder model and implement using PyTorch.
-    - DiT
-
-- [ ] Get comfortable on HPC Greene and do a test train.
+### What we've already dones
+- [ x ] Basic Pong setup, does the following:
+    - Allows keyboard input for future human playing
+    - Has a mode to visualize actions in real time (for our understanding/tests)
+    - Uses computer policy to automatically make best moves with a probability to do something random
+        - When training, this will allow us to generate games with different levels of "expertise"
+    - Has scaffold for using actions from the encoder if implemented in the future
+- [ x ] First level ViT Encoder creation:
+- [ x ] Created a main file:
+    - Inside main.py, we define different command line arguments to parse the following arguments:
+        - *f: Frames amount*
+        - *v: View in window*
+        - *p: Player keyboard input mode*
+        - *e: Epsilon probability to make any random move
+        - *h: Help*
+    - By default, no training is happening here. This code just calls the Pong interface to view a game with FRAMES length, Computer or Player control, and with an Epsilon probability for the Computer mode.
 
 ## Similar Models
 - Oasis Model: https://oasis-model.github.io/
