@@ -2,3 +2,4 @@ ale-py
 gymnasium
 keyboard
 numpy
+torch
