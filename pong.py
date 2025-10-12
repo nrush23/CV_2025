@@ -15,11 +15,15 @@ np.set_printoptions(threshold=sys.maxsize)
 BALL_COLOR = 236
 PADDLE_COLOR = np.array([92, 186, 92])
 
+#Borders to help us compute the locations of the ball and paddle
 BORDER_ROWS = np.array([24,  25,  26,  27,  28,  29,  30,  31,  32,  33, 194,
                        195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209])
 TOP_BORDER = 33
 
+#Location of the paddle's center on the X axis
 PADDLE_X = 141.5
+
+#Velocity epsilon for determining whether or not we need to track the location of the ball
 V_EPS = 0.001
 
 
@@ -100,7 +104,7 @@ class Pong:
         print(f"✅ Saved encoded observations to {filename}")
         print(f"   Shape: {encoded_tensor.shape}")
     
-    # ------------------------------------  PHYSICS LOGIC  ------------------------------------- #
+    # -----------------------------  getACTION PHYSICS LOGIC  ---------------------------------- #
     #                                                                                            #
     #  Calculate where the BALL will intercept the PADDLE's X-COORD and move towards that point  #
     #  Math:   -We use this equation:                                                            #

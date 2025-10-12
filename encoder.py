@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+#TODO: Add padding if our image dimensions are too small for the patch size
+#With a default of 14x14 patches, our height is okay but width is 8 short
+PADDING_WIDTH = 8
+PADDING_HEIGHT = 0
+
 class PatchEmbedding(nn.Module):
     """將圖像切分成 patches 並轉換成 embeddings"""
     def __init__(self, img_height=210, img_width=160, patch_size=14, in_channels=3, embed_dim=256):

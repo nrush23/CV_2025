@@ -26,5 +26,7 @@ def main():
     game = Pong(VIEW, PLAY, EPS)
     game.visualize(FRAMES)
 
+    # TODO: Add our simulation loop code here, this should initialize our encoders and pass Pong frames to them
+
 if __name__ == "__main__":
     main()
