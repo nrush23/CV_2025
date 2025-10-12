@@ -1,6 +1,22 @@
 # CV Project 2025
 Computer Vision Fall 2025 project for generating frames of Pong or Tetris based off of key board actions in real time.
-
+## Quickstart
+Inside the project folder, run the following
+- **Windows:**  
+``` 
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt  
+python main.py -f 300 -e 0.0
+```
+- **Mac/Linux:**
+```
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python main.py -f 300 -e 0.0
+```
+The following commands should open an ALE Atari Pong window with the green paddle playing optimally. The window will close after 5 seconds (300 frames/60FPS = 5s).
 ## Setup
 1. Clone a copy of this repository to your local machine
 2. Open a terminal and navigate to the CV_2025 folder
@@ -16,10 +32,10 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
     - ```pip install -r requirements.txt```
 7. Run commands:
     - Main file: `python main.py [-f FRAMES] [-e EPSILON] [-v] [-p] [-h]`
-        - *f: Frames amount*
-        - *v: View in window*
-        - *p: Player keyboard input mode*
-        - *e: Episolon probability to pick any random move*
+        - *f: Frames amount (Default 10)*
+        - *v: View in window (Default true)*
+        - *p: Player keyboard input mode (Default false)*
+        - *e: Episolon probability to pick any random move (Default 0.01)*
         - *h: Help*
     - Any file: `python file_name.py`
 8. When finished, deactivate your environment:
@@ -70,10 +86,10 @@ Add any additional required libraries to the requirements.txt file
 - ✅ **First level ViT Encoder creation**
 - ✅ **Created a ```main.py``` file**:
     - Inside ```main.py```, we define different command line arguments to parse the following arguments:
-        - *f: Frames amount*
-        - *v: View in window*
-        - *p: Player keyboard input mode*
-        - *e: Epsilon probability to make any random move*
+        - *f: Frames amount (Default 10)*
+        - *v: View in window (Default true)*
+        - *p: Player keyboard input mode (Default false)*
+        - *e: Episolon probability to pick any random move (Default 0.01)*
         - *h: Help*
     - By default, no training is happening here. This code just calls the Pong interface to view a game with FRAMES length, Computer or Player control, and with an Epsilon probability for the Computer mode.
 
