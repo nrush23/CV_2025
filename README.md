@@ -37,14 +37,14 @@ Add any additional required libraries to the requirements.txt file
 - [ ] Finish implementing the model 
 
 ### What we've already dones
-- [ x ] Basic Pong setup, does the following:
+- [x] Basic Pong setup, does the following:
     - Allows keyboard input for future human playing
     - Has a mode to visualize actions in real time (for our understanding/tests)
     - Uses computer policy to automatically make best moves with a probability to do something random
         - When training, this will allow us to generate games with different levels of "expertise"
     - Has scaffold for using actions from the encoder if implemented in the future
-- [ x ] First level ViT Encoder creation:
-- [ x ] Created a main file:
+- [x] First level ViT Encoder creation:
+- [x] Created a main file:
     - Inside main.py, we define different command line arguments to parse the following arguments:
         - *f: Frames amount*
         - *v: View in window*
