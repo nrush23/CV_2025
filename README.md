@@ -15,10 +15,11 @@ Computer Vision Fall 2025 project for generating frames of Pong or Tetris based 
 6. Now install the required libraries:
     - ```pip install -r requirements.txt```
 7. Run commands:
-    - Main file: `python main.py [-f FRAMES] [-v] [-p] [-h]`
+    - Main file: `python main.py [-f FRAMES] [-e EPSILON] [-v] [-p] [-h]`
         - *f: Frames amount*
         - *v: View in window*
         - *p: Player keyboard input mode*
+        - *e: Episolon probability to pick any random move*
         - *h: Help*
     - Any file: `python file_name.py`
 8. When finished, deactivate your environment:
@@ -39,9 +40,22 @@ Add any additional required libraries to the requirements.txt file
     If we follow the OASIS pipeline, we need to make a *3 part system*: ```ViT-VAE Encoder -> DiT -> ViT-VAE Decoder```
     ![Oasis Model Diagram](assets/OASIS_MODEL.png)  
     1. **ViT-VAE Encoder**  
-    The ViT-VAE is for processing images to be sent into the DiT. It does no learning itself, just sets up our input to be used within the training model. First, we take our starting Pong frame and calculate its computer policy action using our Pong interface. From there, we compute what the next game frame looks like from that input and action. This next game frame image is what actually gets fed into the ViT-VAE encoder. The ViT-VAE encoder will patchify the image with its positional encodings to be translated into *latent space.* This latent space is where our learning occurs.
+    The ViT-VAE is for processing images to be sent into the DiT. It does no learning itself, just sets up our input to be used within the training model.  
+    *General Procedure:*  
+        - First, we take our starting Pong frame and calculate its computer policy ```action``` using our Pong interface
+        - Next, we probe our Pong interface for the ```next frame``` by taking that action
+            - This ```next frame``` image is what actually gets fed into the ViT-VAE encoder.
+        - Finally, the ViT-VAE encoder converts this image into patches with its ```positional encodings``` to be translated into *latent space*.
+            - This latent space is where our learning occurs.
     2. **DiT**  
-    The purpose of the DiT is to denoise images so we can always generate frames even if we were given random static and an arbitrary action. To do this, we use a predetermined Gaussian noise function with scheduled time steps. From here, we take our ground truth encoding (the frame we just retrieved and encoded), its action to get there, and a randomly sampled time step. We then mix our ground truth encoding with the noise function at that time and give it to the DiT. The DiT then trains to *remove* that noise based on our action and outputs a "cleaned" latent space vector to be decoded. To calculate loss, we compared the ground truth encoding to our DiT trained encoding in the latent space.
+    The purpose of the DiT is to denoise images so we can always generate frames even if we were given random static and an arbitrary action.  
+    *General Procedure:*  
+        - First, we need to create a predetermined Gaussian noise function with discrete time steps. This noise will be mixed with our ground truths to train the ```DiT```. 
+            - We only need one function, it will be used on each training encoding 
+        - Next, we take our ground truth encoding (the ```next frame``` we just encoded), the ```action``` we used to get there, and a randomly sampled ```time step```.
+        - We then sample our noise function at that ```time step``` and mix the noise with our ground truth (```next frame```)
+        - Finally, the ```DiT``` trains to *remove* the noise based on our ```action``` and outputs a "cleaned" latent space vector to be decoded
+            - **To calculate loss,** we compare the **ground truth encoding** to our **DiT trained encoding** in the latent space.
     3. **ViT-VAE Decoder**  
     After getting the denoised DiT latent space vector, we can then use the ViT-VAE Decoder to decode the latent space vector and turn it back into an RGB frame. During training, we only need to decode if want to see some of the samples or perform pixel-pixel losses.
 
@@ -52,6 +66,7 @@ Add any additional required libraries to the requirements.txt file
     - Uses computer policy to automatically make best moves with a probability to do something random
         - When training, this will allow us to generate games with different levels of "expertise"
     - Has scaffold for using actions from the encoder if implemented in the future
+    ![Computer Policy for Training](assets/computer_policy.gif)
 - ✅ **First level ViT Encoder creation**
 - ✅ **Created a ```main.py``` file**:
     - Inside ```main.py```, we define different command line arguments to parse the following arguments:
