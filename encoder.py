@@ -2,11 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-#TODO: Add padding if our image dimensions are too small for the patch size
-#With a default of 14x14 patches, our height is okay but width is 8 short
-PADDING_WIDTH = 8
-PADDING_HEIGHT = 0
-
 class PatchEmbedding(nn.Module):
     """將圖像切分成 patches 並轉換成 embeddings"""
     def __init__(self, img_height=210, img_width=160, patch_size=14, in_channels=3, embed_dim=256):
@@ -203,7 +198,7 @@ def create_encoder(config=None):
     default_config = {
         'img_height': 210,
         'img_width': 160,
-        'patch_size': 14,
+        'patch_size': 10,  # 改為 10，確保能整除 210 和 160
         'in_channels': 3,
         'embed_dim': 256,
         'depth': 6,
@@ -271,7 +266,7 @@ if __name__ == "__main__":
     
     print(f"\n📊 Encoder Architecture Information:")
     print(f"- Input frame size: 210×160×3")
-    print(f"- Patch 大小: 14×14")
+    print(f"- Patch size: 10×10")
     print(f"- Number of patches: {encoder.patch_embed.n_patches_h}×{encoder.patch_embed.n_patches_w} = {encoder.patch_embed.n_patches}")
     print(f"- Embedding dimension: {encoder.embed_dim}")
     print(f"- Number of Transformer layers: {len(encoder.blocks)}")
