@@ -5,7 +5,7 @@ import sys
 import keyboard
 import torch
 
-# 導入我們的 encoder
+# Import our encoder components
 from encoder import create_encoder, encode_pong_observation
 
 np.set_printoptions(threshold=sys.maxsize)
@@ -21,33 +21,33 @@ class Pong:
         self.PLAY = PLAY
         self.PREV = None
         
-        # 初始化 encoder（如果需要）
+        # Initialize the encoder (if required)
         self.use_encoder = use_encoder
         if self.use_encoder:
             print("Initializing ViT Encoder...")
             self.encoder = create_encoder()
-            self.encoder.eval()  # 設定為評估模式
+            self.encoder.eval()  # Set to evaluation mode
             print("✅ Encoder is ready")
             
-            # 用於儲存編碼後的觀察值
+            # Used to store encoded observations
             self.encoded_observations = []
 
     def visualize(self, FRAMES=10):
         """Runs Pong at 30FPS for FRAMES amount of frames"""
         for i in range(FRAMES):
-            # 獲取 RGB 畫面
+            # Get the RGB frame
             obs = self.env.unwrapped.get_wrapper_attr("ale").getScreenRGB()
             
-            # 如果使用 encoder，編碼當前畫面
+            # If using the encoder, encode the current frame
             if self.use_encoder:
                 latent = encode_pong_observation(self.encoder, obs)
                 self.encoded_observations.append(latent)
                 
-                # 每 100 幀顯示一次編碼資訊
+                # Display encoding information every 100 frames
                 if i % 100 == 0:
                     print(f"Frame {i}: Latent representation shape = {latent.shape}")
             
-            # 獲取動作
+            # Get the action
             action = self.getPlay() if self.PLAY else self.getAction(obs)
 
             obs, reward, terminated, truncated, info = self.env.step(action)
@@ -63,36 +63,35 @@ class Pong:
             self.save_encoded_observations()
 
     def save_encoded_observations(self, filename="encoded_observations.pt"):
-        """儲存編碼後的觀察值供後續訓練使用"""
+        """Saves the encoded observations for later training use"""
         if not self.encoded_observations:
             print("No observations were collected and encoded.")
             return
         
-        # 將所有觀察值堆疊成一個 tensor
+        # Stack all observations into a single tensor
         encoded_tensor = torch.cat(self.encoded_observations, dim=0)
         torch.save(encoded_tensor, filename)
         print(f"✅ Saved encoded observations to {filename}")
-        print(f"   Shape: {encoded_tensor.shape}")
+        print(f"    Shape: {encoded_tensor.shape}")
 
     def getAction(self, obs):
         """
-        使用編碼後的觀察值來決定動作
-        這裡可以整合您的 AI 模型
+        Determines the action using the encoded observation
+        Your AI model can be integrated here
         """
-        # 選項 1: 使用原始像素找球
+        # Option 1: Use raw pixels to find the ball (for basic logic)
         masked = (obs == 236).all(axis=2)
         
-        # 選項 2: 如果使用 encoder，可以在潛在空間中分析
+        # Option 2: If using the encoder, analysis can be done in the latent space
         if self.use_encoder and len(self.encoded_observations) > 0:
-            # 獲取最新的潛在表示
+            # Get the latest latent representation
             latent = self.encoded_observations[-1]
             
-            # TODO: 在這裡可以加入您的 AI 決策邏輯
-            # 例如：使用潛在表示預測最佳動作
-            # action = your_policy_network(latent)
+            # TODO: Add your AI decision logic here
+            # For example: action = your_policy_network(latent)
             pass
         
-        # 目前還是隨機動作
+        # Currently defaults to a random action
         return self.env.action_space.sample()
 
     def getPlay(self):
@@ -104,16 +103,16 @@ class Pong:
         return 0
 
 
-# ============ 使用範例 ============
+# ============ Usage Example ============
 if __name__ == "__main__":
     print("=" * 60)
     print("Pong with ViT Encoder Test")
     print("=" * 60)
     
-    # 創建 Pong 實例並啟用 encoder
+    # Create Pong instance and enable the encoder
     game = Pong(VIEW=True, PLAY=False, use_encoder=True)
     
-    # 運行 300 幀以收集編碼數據
+    # Run for 300 frames to collect encoded data
     game.visualize(FRAMES=300)
     
     print("\n✅ Test completed!")
