@@ -93,6 +93,13 @@ Add any additional required libraries to the requirements.txt file
         - *h: Help*
     - By default, no training is happening here. This code just calls the Pong interface to view a game with FRAMES length, Computer or Player control, and with an Epsilon probability for the Computer mode.
 
+## Files
+| File  | Function |
+| ------------- | ------------- |
+| decoder.py  | ViT Encoder - Encoding Game Frames  |
+| encoder.py  | ViT Decoder + DiT - Reconstruction and Generation  |
+| train.py  | Complete Training System  |
+
 ## Similar Models
 - Oasis Model: https://oasis-model.github.io/
 - MineWorld: https://github.com/microsoft/mineworld
