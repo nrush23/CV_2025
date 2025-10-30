@@ -1,8 +1,9 @@
 """
 Decoder for Pong Game - Vision Transformer + DiT Implementation
-包含：
-1. ViT Decoder: 將潛在表示重建回遊戲畫面
-2. DiT: Diffusion Transformer 用於生成新畫面
+
+Includes:
+1. ViT Decoder: Reconstructs the game frame from the latent representation.
+2. DiT: Diffusion Transformer used for generating new frames.
 """
 
 import torch
@@ -12,7 +13,7 @@ import math
 
 
 # ============================================================
-# Part 1: Standard ViT Decoder (用於 Autoencoder 訓練)
+# Part 1: Standard ViT Decoder (Used for Autoencoder Training)
 # ============================================================
 
 class TransformerDecoderBlock(nn.Module):
@@ -48,7 +49,7 @@ class TransformerDecoderBlock(nn.Module):
 class ViTDecoder(nn.Module):
     """
     Vision Transformer Decoder for Pong
-    將潛在表示重建回遊戲畫面
+    Reconstructs the game frame from the latent representation
     """
     def __init__(
         self,
@@ -71,12 +72,12 @@ class ViTDecoder(nn.Module):
         self.latent_dim = latent_dim
         self.embed_dim = embed_dim
         
-        # 計算 patches 數量
+        # Calculate the number of patches
         self.n_patches_h = img_height // patch_size
         self.n_patches_w = img_width // patch_size
         self.n_patches = self.n_patches_h * self.n_patches_w
         
-        # 1. 從潛在空間投影回 embed 空間
+        # 1. Project from latent space back to embed space
         self.from_latent = nn.Sequential(
             nn.Linear(latent_dim, latent_dim * 2),
             nn.GELU(),
@@ -97,7 +98,7 @@ class ViTDecoder(nn.Module):
         # 4. Layer Norm
         self.norm = nn.LayerNorm(embed_dim)
         
-        # 5. 投影到 patch 像素空間
+        # 5. Project to patch pixel space
         patch_dim = out_channels * patch_size * patch_size
         self.to_pixels = nn.Linear(embed_dim, patch_dim)
         
@@ -114,30 +115,30 @@ class ViTDecoder(nn.Module):
     def forward(self, latent):
         """
         Args:
-            latent: (batch, n_patches, latent_dim) - 潛在表示
+            latent: (batch, n_patches, latent_dim) - Latent representation
             
         Returns:
-            image: (batch, channels, height, width) - 重建的圖像
+            image: (batch, channels, height, width) - Reconstructed image
         """
         batch_size = latent.shape[0]
         
-        # 1. 從潛在空間投影回 embed 空間
+        # 1. Project from latent space back to embed space
         x = self.from_latent(latent)  # (batch, n_patches, embed_dim)
         
-        # 2. 加上 positional encoding
+        # 2. Add positional encoding
         x = x + self.pos_embed
         
-        # 3. 通過 Transformer blocks
+        # 3. Pass through Transformer blocks
         for block in self.blocks:
             x = block(x)
         
         # 4. Layer norm
         x = self.norm(x)
         
-        # 5. 投影到像素空間
+        # 5. Project to pixel space
         x = self.to_pixels(x)  # (batch, n_patches, patch_dim)
         
-        # 6. 重組成圖像
+        # 6. Reshape to image
         # (batch, n_patches, C*P*P) -> (batch, n_patches_h, n_patches_w, C, P, P)
         x = x.reshape(
             batch_size, 
@@ -148,10 +149,10 @@ class ViTDecoder(nn.Module):
             self.patch_size
         )
         
-        # 重排維度: (batch, C, n_patches_h, P, n_patches_w, P)
+        # Permute dimensions: (batch, C, n_patches_h, P, n_patches_w, P)
         x = x.permute(0, 3, 1, 4, 2, 5)
         
-        # 合併 patches: (batch, C, H, W)
+        # Merge patches: (batch, C, H, W)
         x = x.reshape(
             batch_size,
             self.out_channels,
@@ -159,18 +160,18 @@ class ViTDecoder(nn.Module):
             self.n_patches_w * self.patch_size
         )
         
-        # Sigmoid 確保輸出在 [0, 1]
+        # Sigmoid to ensure output is in [0, 1]
         x = torch.sigmoid(x)
         
         return x
 
 
 # ============================================================
-# Part 2: DiT (Diffusion Transformer) - 用於生成新畫面
+# Part 2: DiT (Diffusion Transformer) - Used for Generating New Frames
 # ============================================================
 
 class TimestepEmbedding(nn.Module):
-    """將 timestep 編碼成向量"""
+    """Encodes the timestep into a vector"""
     def __init__(self, dim):
         super().__init__()
         self.dim = dim
@@ -178,9 +179,9 @@ class TimestepEmbedding(nn.Module):
     def forward(self, timesteps):
         """
         Args:
-            timesteps: (batch,) - timestep 值
+            timesteps: (batch,) - Timestep values
         Returns:
-            emb: (batch, dim) - 編碼後的向量
+            emb: (batch, dim) - Encoded vector
         """
         half_dim = self.dim // 2
         emb = math.log(10000) / (half_dim - 1)
@@ -193,7 +194,7 @@ class TimestepEmbedding(nn.Module):
 class DiTBlock(nn.Module):
     """
     Diffusion Transformer Block
-    與標準 Transformer 不同，這個 block 會接收條件信息
+    Unlike a standard Transformer, this block receives conditional information
     """
     def __init__(self, embed_dim=256, num_heads=8, mlp_ratio=4.0, dropout=0.1):
         super().__init__()
@@ -218,7 +219,7 @@ class DiTBlock(nn.Module):
             nn.Dropout(dropout)
         )
         
-        # Adaptive Layer Norm (用於條件注入)
+        # Adaptive Layer Norm (for condition injection)
         self.adaLN_modulation = nn.Sequential(
             nn.SiLU(),
             nn.Linear(embed_dim, 6 * embed_dim)
@@ -227,13 +228,13 @@ class DiTBlock(nn.Module):
     def forward(self, x, condition):
         """
         Args:
-            x: (batch, n_patches, embed_dim) - 輸入特徵
-            condition: (batch, embed_dim) - 條件向量 (timestep + action)
+            x: (batch, n_patches, embed_dim) - Input features
+            condition: (batch, embed_dim) - Conditional vector (timestep + action)
             
         Returns:
-            x: (batch, n_patches, embed_dim) - 輸出特徵
+            x: (batch, n_patches, embed_dim) - Output features
         """
-        # 計算調製參數
+        # Calculate modulation parameters
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = \
             self.adaLN_modulation(condition).chunk(6, dim=1)
         
@@ -254,9 +255,9 @@ class DiTBlock(nn.Module):
 class DiT(nn.Module):
     """
     Diffusion Transformer for Pong
-    在潛在空間中生成新的遊戲畫面
+    Generates new game frames in the latent space
     
-    用途：給定當前畫面的潛在表示和玩家動作，預測下一幀
+    Usage: Given the latent representation of the current frame and the player action, predict the next frame.
     """
     def __init__(
         self,
@@ -264,7 +265,7 @@ class DiT(nn.Module):
         embed_dim=256,
         depth=8,
         num_heads=8,
-        num_actions=6,  # Pong 有 6 個可能的動作
+        num_actions=6,  # Pong has 6 possible actions
         dropout=0.1
     ):
         super().__init__()
@@ -273,10 +274,10 @@ class DiT(nn.Module):
         self.embed_dim = embed_dim
         self.num_actions = num_actions
         
-        # 1. 從潛在空間投影到 embed 空間
+        # 1. Project from latent space to embed space
         self.latent_proj = nn.Linear(latent_dim, embed_dim)
         
-        # 2. Timestep embedding (用於 diffusion)
+        # 2. Timestep embedding (for diffusion)
         self.time_embed = nn.Sequential(
             TimestepEmbedding(embed_dim),
             nn.Linear(embed_dim, embed_dim),
@@ -288,7 +289,7 @@ class DiT(nn.Module):
         self.action_embed = nn.Embedding(num_actions, embed_dim)
         
         # 4. Positional embedding
-        # 假設最多 400 個 patches (足夠容納 21×16=336)
+        # Assume max 400 patches (enough for 21x16=336)
         self.pos_embed = nn.Parameter(torch.zeros(1, 400, embed_dim))
         
         # 5. DiT Blocks
@@ -300,7 +301,7 @@ class DiT(nn.Module):
         # 6. Final norm
         self.final_norm = nn.LayerNorm(embed_dim)
         
-        # 7. 投影回潛在空間
+        # 7. Project back to latent space
         self.final_proj = nn.Linear(embed_dim, latent_dim)
         
         self._init_weights()
@@ -318,27 +319,27 @@ class DiT(nn.Module):
     def forward(self, latent, timesteps, actions):
         """
         Args:
-            latent: (batch, n_patches, latent_dim) - 當前幀的潛在表示
-            timesteps: (batch,) - diffusion timesteps
-            actions: (batch,) - 玩家動作 (0-5)
+            latent: (batch, n_patches, latent_dim) - Latent representation of the current frame
+            timesteps: (batch,) - Diffusion timesteps
+            actions: (batch,) - Player actions (0-5)
             
         Returns:
-            pred_latent: (batch, n_patches, latent_dim) - 預測的下一幀潛在表示
+            pred_latent: (batch, n_patches, latent_dim) - Predicted next frame latent representation
         """
         batch_size, n_patches, _ = latent.shape
         
-        # 1. 投影到 embed 空間
+        # 1. Project to embed space
         x = self.latent_proj(latent)  # (batch, n_patches, embed_dim)
         
-        # 2. 加上 positional embedding
+        # 2. Add positional embedding
         x = x + self.pos_embed[:, :n_patches, :]
         
-        # 3. 計算條件向量 (timestep + action)
+        # 3. Calculate conditional vector (timestep + action)
         time_emb = self.time_embed(timesteps)  # (batch, embed_dim)
         action_emb = self.action_embed(actions)  # (batch, embed_dim)
         condition = time_emb + action_emb  # (batch, embed_dim)
         
-        # 4. 通過 DiT blocks
+        # 4. Pass through DiT blocks
         for block in self.blocks:
             x = block(x, condition)
         
@@ -350,13 +351,13 @@ class DiT(nn.Module):
 
 
 # ============================================================
-# Part 3: 完整的 Autoencoder (Encoder + Decoder)
+# Part 3: Full Autoencoder (Encoder + Decoder)
 # ============================================================
 
 class PongAutoencoder(nn.Module):
     """
-    完整的 Autoencoder for Pong
-    結合 Encoder 和 Decoder
+    Full Autoencoder for Pong
+    Combines Encoder and Decoder
     """
     def __init__(self, encoder, decoder):
         super().__init__()
@@ -366,11 +367,11 @@ class PongAutoencoder(nn.Module):
     def forward(self, x):
         """
         Args:
-            x: (batch, 3, 210, 160) - 原始畫面
+            x: (batch, 3, 210, 160) - Original frame
             
         Returns:
-            recon: (batch, 3, 210, 160) - 重建的畫面
-            latent: (batch, n_patches, latent_dim) - 潛在表示
+            recon: (batch, 3, 210, 160) - Reconstructed frame
+            latent: (batch, n_patches, latent_dim) - Latent representation
         """
         latent = self.encoder(x)
         recon = self.decoder(latent)
@@ -378,15 +379,15 @@ class PongAutoencoder(nn.Module):
 
 
 # ============================================================
-# 輔助函數
+# Helper Functions
 # ============================================================
 
 def create_decoder(config=None):
-    """創建 Decoder"""
+    """Creates the Decoder"""
     default_config = {
         'img_height': 210,
         'img_width': 160,
-        'patch_size': 10,  # 改為 10，確保能整除
+        'patch_size': 10,  # Changed to 10 to ensure divisibility
         'out_channels': 3,
         'latent_dim': 128,
         'embed_dim': 256,
@@ -402,7 +403,7 @@ def create_decoder(config=None):
 
 
 def create_dit(config=None):
-    """創建 DiT"""
+    """Creates the DiT"""
     default_config = {
         'latent_dim': 128,
         'embed_dim': 256,
@@ -419,14 +420,14 @@ def create_dit(config=None):
 
 
 def create_autoencoder(encoder, decoder=None):
-    """創建完整的 Autoencoder"""
+    """Creates the full Autoencoder"""
     if decoder is None:
         decoder = create_decoder()
     return PongAutoencoder(encoder, decoder)
 
 
 # ============================================================
-# 測試代碼
+# Test Code
 # ============================================================
 
 if __name__ == "__main__":
@@ -434,7 +435,7 @@ if __name__ == "__main__":
     print("Pong Decoder & DiT Test")
     print("=" * 70)
     
-    # ========== 測試 Decoder ==========
+    # ========== Test Decoder ==========
     print("\n📦 Part 1: Test ViT Decoder")
     print("-" * 70)
     
@@ -447,8 +448,8 @@ if __name__ == "__main__":
     print(f"- Number of Transformer layers: 6")
     print(f"- Total parameters: {sum(p.numel() for p in decoder.parameters()):,}")
     
-    # 測試 decoder
-    dummy_latent = torch.randn(2, 336, 128)  # 2 個樣本，336 patches (21×16)
+    # Test decoder
+    dummy_latent = torch.randn(2, 336, 128)  # 2 samples, 336 patches (21x16)
     print(f"\nInput latent representation shape: {dummy_latent.shape}")
     
     with torch.no_grad():
@@ -458,7 +459,7 @@ if __name__ == "__main__":
     print(f"Output image shape: {reconstructed.shape}")
     print(f"Output value range: [{reconstructed.min().item():.3f}, {reconstructed.max().item():.3f}]")
     
-    # ========== 測試 DiT ==========
+    # ========== Test DiT ==========
     print("\n\n🌟 Part 2: Testing Diffusion Transformer (DiT)")
     print("-" * 70)
     
@@ -471,7 +472,7 @@ if __name__ == "__main__":
     print(f"- Supported action count: 6")
     print(f"- Total parameters: {sum(p.numel() for p in dit.parameters()):,}")
     
-    # 測試 DiT
+    # Test DiT
     dummy_latent = torch.randn(2, 336, 128)  # 336 patches
     dummy_timesteps = torch.randint(0, 1000, (2,))
     dummy_actions = torch.randint(0, 6, (2,))
@@ -487,11 +488,11 @@ if __name__ == "__main__":
     print(f"\n✅ DiT prediction successful!")
     print(f"Output latent representation shape: {pred_latent.shape}")
     
-    # ========== 測試完整 Pipeline ==========
+    # ========== Test Full Pipeline ==========
     print("\n\n🔄 Part 3: Testing the Full Autoencoder Pipeline")
     print("-" * 70)
     
-    # 需要 encoder，這裡模擬一下
+    # Need an encoder, simulating here
     from encoder import create_encoder
     
     encoder = create_encoder()
@@ -500,8 +501,8 @@ if __name__ == "__main__":
     
     print(f"Total Autoencoder parameters: {sum(p.numel() for p in autoencoder.parameters()):,}")
     
-    # 測試完整流程
-    dummy_frame = torch.rand(2, 3, 210, 160)  # 2 個遊戲畫面
+    # Test full pipeline
+    dummy_frame = torch.rand(2, 3, 210, 160)  # 2 game frames
     print(f"\nInput original image shape: {dummy_frame.shape}")
     
     with torch.no_grad():
@@ -511,7 +512,7 @@ if __name__ == "__main__":
     print(f"Latent representation shape: {latent.shape}")
     print(f"Reconstructed image shape: {reconstructed.shape}")
     
-    # 計算重建誤差
+    # Calculate reconstruction error
     mse = torch.mean((dummy_frame - reconstructed) ** 2)
     print(f"\nRebuilding MSE (untrained): {mse.item():.4f}")
     
