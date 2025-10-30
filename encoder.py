@@ -3,19 +3,19 @@ import torch.nn as nn
 import numpy as np
 
 class PatchEmbedding(nn.Module):
-    """將圖像切分成 patches 並轉換成 embeddings"""
+    """Splits the image into patches and converts them into embeddings"""
     def __init__(self, img_height=210, img_width=160, patch_size=14, in_channels=3, embed_dim=256):
         super().__init__()
         self.img_height = img_height
         self.img_width = img_width
         self.patch_size = patch_size
         
-        # 計算 patches 數量（支援非正方形圖像）
+        # Calculate the number of patches (supports non-square images)
         self.n_patches_h = img_height // patch_size
         self.n_patches_w = img_width // patch_size
         self.n_patches = self.n_patches_h * self.n_patches_w
         
-        # 使用卷積層來切分 patches 並投影到 embed_dim
+        # Use a convolutional layer to split patches and project to embed_dim
         self.proj = nn.Conv2d(
             in_channels, 
             embed_dim, 
@@ -32,7 +32,7 @@ class PatchEmbedding(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    """標準的 Transformer Encoder Block"""
+    """Standard Transformer Encoder Block"""
     def __init__(self, embed_dim=256, num_heads=8, mlp_ratio=4.0, dropout=0.1):
         super().__init__()
         self.norm1 = nn.LayerNorm(embed_dim)
@@ -67,18 +67,18 @@ class TransformerBlock(nn.Module):
 class ViTEncoder(nn.Module):
     """
     Vision Transformer Encoder for Pong frames
-    將遊戲畫面編碼成潛在表示
+    Encodes the game frame into a latent representation
     """
     def __init__(
         self, 
-        img_height=210,         # Pong 畫面高度
-        img_width=160,          # Pong 畫面寬度
-        patch_size=14,          # 每個 patch 的大小
-        in_channels=3,          # RGB 通道
-        embed_dim=256,          # Embedding 維度
-        depth=6,                # Transformer 層數
-        num_heads=8,            # Attention heads 數量
-        latent_dim=128,         # 最終潛在向量維度
+        img_height=210,           # Pong frame height
+        img_width=160,            # Pong frame width
+        patch_size=14,            # Size of each patch
+        in_channels=3,            # RGB channels
+        embed_dim=256,            # Embedding dimension
+        depth=6,                  # Number of Transformer layers
+        num_heads=8,              # Number of Attention heads
+        latent_dim=128,           # Final latent vector dimension
         dropout=0.1
     ):
         super().__init__()
@@ -95,7 +95,7 @@ class ViTEncoder(nn.Module):
         )
         n_patches = self.patch_embed.n_patches
         
-        # 2. Positional Embedding (可學習)
+        # 2. Positional Embedding (learnable)
         self.pos_embed = nn.Parameter(
             torch.zeros(1, n_patches, embed_dim)
         )
@@ -109,18 +109,18 @@ class ViTEncoder(nn.Module):
         # 4. Layer Norm
         self.norm = nn.LayerNorm(embed_dim)
         
-        # 5. 投影到潛在空間
+        # 5. Project to latent space
         self.to_latent = nn.Sequential(
             nn.Linear(embed_dim, latent_dim * 2),
             nn.GELU(),
             nn.Linear(latent_dim * 2, latent_dim)
         )
         
-        # 初始化權重
+        # Initialize weights
         self._init_weights()
     
     def _init_weights(self):
-        """初始化權重"""
+        """Initializes weights"""
         nn.init.trunc_normal_(self.pos_embed, std=0.02)
         
         for m in self.modules():
@@ -135,47 +135,47 @@ class ViTEncoder(nn.Module):
     def forward(self, x):
         """
         Args:
-            x: (batch, channels, height, width) - 遊戲畫面
+            x: (batch, channels, height, width) - Game frame
             
         Returns:
-            latent: (batch, n_patches, latent_dim) - 潛在表示
+            latent: (batch, n_patches, latent_dim) - Latent representation
         """
-        # 1. 切分成 patches 並 embed
+        # 1. Split into patches and embed
         x = self.patch_embed(x)  # (batch, n_patches, embed_dim)
         
-        # 2. 加上 positional encoding
+        # 2. Add positional encoding
         x = x + self.pos_embed
         
-        # 3. 通過 Transformer blocks
+        # 3. Pass through Transformer blocks
         for block in self.blocks:
             x = block(x)
         
         # 4. Layer norm
         x = self.norm(x)
         
-        # 5. 投影到潛在空間
+        # 5. Project to latent space
         latent = self.to_latent(x)  # (batch, n_patches, latent_dim)
         
         return latent
     
     def encode_frame(self, frame):
         """
-        方便的函數：編碼單一畫面
+        Convenience function: Encodes a single frame
         
         Args:
-            frame: numpy array (height, width, channels) 或 tensor
+            frame: numpy array (height, width, channels) or tensor
             
         Returns:
-            latent: 潛在表示
+            latent: Latent representation
         """
         if isinstance(frame, np.ndarray):
             frame = torch.from_numpy(frame).float()
         
-        # 調整維度: (H, W, C) -> (1, C, H, W)
+        # Adjust dimensions: (H, W, C) -> (1, C, H, W)
         if frame.dim() == 3:
             frame = frame.permute(2, 0, 1).unsqueeze(0)
         
-        # 正規化到 [0, 1]
+        # Normalize to [0, 1]
         if frame.max() > 1.0:
             frame = frame / 255.0
         
@@ -185,20 +185,20 @@ class ViTEncoder(nn.Module):
         return latent
 
 
-# ============ 輔助函數 ============
+# ============ Helper Functions ============
 
 def create_encoder(config=None):
     """
-    創建 Encoder 的工廠函數
+    Factory function to create the Encoder
     
-    使用方式:
+    Usage:
         encoder = create_encoder()
         encoder = create_encoder({'depth': 8, 'latent_dim': 256})
     """
     default_config = {
         'img_height': 210,
         'img_width': 160,
-        'patch_size': 10,  # 改為 10，確保能整除 210 和 160
+        'patch_size': 10,  # Changed to 10 to ensure divisibility of 210 and 160
         'in_channels': 3,
         'embed_dim': 256,
         'depth': 6,
@@ -215,21 +215,21 @@ def create_encoder(config=None):
 
 def preprocess_pong_frame(frame):
     """
-    將 Pong 遊戲畫面預處理成 Encoder 輸入格式
+    Preprocesses the Pong game frame into the Encoder input format
     
     Args:
-        frame: numpy array (210, 160, 3) 從 ALE 獲得的 RGB 畫面
+        frame: numpy array (210, 160, 3) RGB frame obtained from ALE
         
     Returns:
-        tensor: (1, 3, 210, 160) 正規化後的 tensor
+        tensor: (1, 3, 210, 160) Normalized tensor
     """
-    # 轉成 tensor
+    # Convert to tensor
     frame_tensor = torch.from_numpy(frame).float()
     
-    # 正規化到 [0, 1]
+    # Normalize to [0, 1]
     frame_tensor = frame_tensor / 255.0
     
-    # 調整維度: (H, W, C) -> (1, C, H, W)
+    # Adjust dimensions: (H, W, C) -> (1, C, H, W)
     frame_tensor = frame_tensor.permute(2, 0, 1).unsqueeze(0)
     
     return frame_tensor
@@ -237,14 +237,14 @@ def preprocess_pong_frame(frame):
 
 def encode_pong_observation(encoder, obs):
     """
-    編碼 Pong 觀察值
+    Encodes the Pong observation
     
     Args:
-        encoder: ViTEncoder 實例
-        obs: numpy array 從環境獲得的觀察值
+        encoder: ViTEncoder instance
+        obs: numpy array observation obtained from the environment
         
     Returns:
-        latent: 編碼後的潛在表示
+        latent: Encoded latent representation
     """
     frame_tensor = preprocess_pong_frame(obs)
     
@@ -254,13 +254,13 @@ def encode_pong_observation(encoder, obs):
     return latent
 
 
-# ============ 使用範例 ============
+# ============ Usage Example ============
 if __name__ == "__main__":
     print("=" * 60)
     print("Pong Encoder Test")
     print("=" * 60)
     
-    # 創建 encoder
+    # Create encoder
     encoder = create_encoder()
     encoder.eval()
     
@@ -273,12 +273,12 @@ if __name__ == "__main__":
     print(f"- Latent vector dimension: {encoder.latent_dim}")
     print(f"- Total parameters: {sum(p.numel() for p in encoder.parameters()):,}")
     
-    # 測試編碼
+    # Test encoding
     print("\n" + "=" * 60)
     print("🧪 Encoding Process Test")
     print("=" * 60)
     
-    # 測試正確的畫面大小
+    # Test with correct frame size
     dummy_frame = torch.randn(1, 3, 210, 160)
     print(f"\nInput shape: {dummy_frame.shape}")
     
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     print(f"  - Number of patches: {latent.shape[1]}")
     print(f"  - Latent vector dimension: {latent.shape[2]}")
     
-    # 測試單一畫面編碼
+    # Test single frame encoding
     print("\n" + "=" * 60)
     print("🎮 Pong Frame Encoding Test")
     print("=" * 60)
