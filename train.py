@@ -1,6 +1,5 @@
 """
-Training script for Pong Autoencoder and DiT
-訓練 Pong 的 Autoencoder 和 Diffusion Transformer
+Training script for Pong Autoencoder and Diffusion Transformer
 """
 
 import torch
@@ -21,12 +20,12 @@ from decoder import create_decoder, create_dit, create_autoencoder
 # ============================================================
 
 class PongFrameDataset(Dataset):
-    """Pong 遊戲畫面數據集"""
+    """Pong game frame dataset"""
     def __init__(self, frames, actions=None):
         """
         Args:
-            frames: numpy array (N, H, W, C) 或 list of frames
-            actions: numpy array (N,) 對應的動作（用於 DiT 訓練）
+            frames: numpy array (N, H, W, C) or list of frames
+            actions: numpy array (N,) corresponding actions (for DiT training)
         """
         self.frames = frames
         self.actions = actions
@@ -37,15 +36,15 @@ class PongFrameDataset(Dataset):
     def __getitem__(self, idx):
         frame = self.frames[idx]
         
-        # 轉成 tensor 並正規化
+        # Convert to tensor and normalize
         if isinstance(frame, np.ndarray):
             frame = torch.from_numpy(frame).float()
         
-        # 確保是 (C, H, W) 格式
+        # Ensure it's in (C, H, W) format
         if frame.shape[0] != 3:
             frame = frame.permute(2, 0, 1)
         
-        # 正規化到 [0, 1]
+        # Normalize to [0, 1]
         if frame.max() > 1.0:
             frame = frame / 255.0
         
@@ -57,11 +56,11 @@ class PongFrameDataset(Dataset):
 
 
 # ============================================================
-# Stage 1: 訓練 Autoencoder
+# Stage 1: Train Autoencoder
 # ============================================================
 
 class AutoencoderTrainer:
-    """Autoencoder 訓練器"""
+    """Autoencoder Trainer"""
     def __init__(self, encoder, decoder, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.device = device
         self.autoencoder = create_autoencoder(encoder, decoder).to(device)
@@ -72,7 +71,7 @@ class AutoencoderTrainer:
         self.val_losses = []
     
     def train_epoch(self, dataloader):
-        """訓練一個 epoch"""
+        """Trains for one epoch"""
         self.autoencoder.train()
         total_loss = 0
         
@@ -95,7 +94,7 @@ class AutoencoderTrainer:
         return avg_loss
     
     def validate(self, dataloader):
-        """驗證"""
+        """Validation"""
         self.autoencoder.eval()
         total_loss = 0
         
@@ -111,7 +110,7 @@ class AutoencoderTrainer:
         return avg_loss
     
     def save(self, path):
-        """儲存模型"""
+        """Saves the model"""
         torch.save({
             'encoder': self.autoencoder.encoder.state_dict(),
             'decoder': self.autoencoder.decoder.state_dict(),
@@ -122,7 +121,7 @@ class AutoencoderTrainer:
         print(f"✅ Model saved to {path}")
     
     def load(self, path):
-        """載入模型"""
+        """Loads the model"""
         checkpoint = torch.load(path, map_location=self.device)
         self.autoencoder.encoder.load_state_dict(checkpoint['encoder'])
         self.autoencoder.decoder.load_state_dict(checkpoint['decoder'])
@@ -132,7 +131,7 @@ class AutoencoderTrainer:
         print(f"✅ Model loaded from {path}")
     
     def plot_losses(self, save_path='training_curves.png'):
-        """繪製訓練曲線"""
+        """Plots the training curves"""
         plt.figure(figsize=(10, 5))
         plt.plot(self.train_losses, label='Train Loss')
         plt.plot(self.val_losses, label='Val Loss')
@@ -147,16 +146,16 @@ class AutoencoderTrainer:
 
 
 # ============================================================
-# Stage 2: 訓練 DiT
+# Stage 2: Train DiT
 # ============================================================
 
 class DiTTrainer:
-    """DiT 訓練器"""
+    """DiT Trainer"""
     def __init__(self, dit, encoder, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.device = device
         self.dit = dit.to(device)
         self.encoder = encoder.to(device)
-        self.encoder.eval()  # Encoder 已經訓練好，設為評估模式
+        self.encoder.eval()  # Encoder is already trained, set to evaluation mode
         
         self.optimizer = optim.AdamW(self.dit.parameters(), lr=1e-4, weight_decay=0.01)
         self.criterion = nn.MSELoss()
@@ -164,15 +163,15 @@ class DiTTrainer:
         self.train_losses = []
     
     def add_noise(self, latent, timesteps):
-        """添加噪聲（簡化版 diffusion）"""
+        """Adds noise (simplified diffusion)"""
         noise = torch.randn_like(latent)
-        # 簡單的線性噪聲調度
+        # Simple linear noise schedule
         alpha = 1.0 - timesteps.float().unsqueeze(-1).unsqueeze(-1) / 1000.0
         noisy_latent = alpha * latent + (1 - alpha) * noise
         return noisy_latent, noise
     
     def train_epoch(self, dataloader):
-        """訓練一個 epoch"""
+        """Trains for one epoch"""
         self.dit.train()
         total_loss = 0
         
@@ -180,22 +179,22 @@ class DiTTrainer:
             frames = frames.to(self.device)
             actions = actions.to(self.device)
             
-            # 1. 用 encoder 編碼畫面
+            # 1. Encode the frame using the encoder
             with torch.no_grad():
                 latent = self.encoder(frames)
             
-            # 2. 添加噪聲
+            # 2. Add noise
             batch_size = frames.shape[0]
             timesteps = torch.randint(0, 1000, (batch_size,), device=self.device)
             noisy_latent, noise = self.add_noise(latent, timesteps)
             
-            # 3. DiT 預測噪聲
+            # 3. DiT predicts the noise
             pred_noise = self.dit(noisy_latent, timesteps, actions)
             
-            # 4. 計算損失
+            # 4. Calculate the loss
             loss = self.criterion(pred_noise, noise)
             
-            # 5. 更新
+            # 5. Update
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -207,7 +206,7 @@ class DiTTrainer:
         return avg_loss
     
     def save(self, path):
-        """儲存模型"""
+        """Saves the model"""
         torch.save({
             'dit': self.dit.state_dict(),
             'optimizer': self.optimizer.state_dict(),
@@ -216,7 +215,7 @@ class DiTTrainer:
         print(f"✅ DiT is saved to {path}")
     
     def load(self, path):
-        """載入模型"""
+        """Loads the model"""
         checkpoint = torch.load(path, map_location=self.device)
         self.dit.load_state_dict(checkpoint['dit'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
@@ -225,11 +224,11 @@ class DiTTrainer:
 
 
 # ============================================================
-# 主要訓練函數
+# Main Training Functions
 # ============================================================
 
 def collect_pong_data(num_frames=1000, view=False):
-    """收集 Pong 遊戲數據"""
+    """Collects Pong game data"""
     print(f"📊 Collecting {num_frames} frames of Pong data...")
     
     from pong import Pong
@@ -246,11 +245,11 @@ def collect_pong_data(num_frames=1000, view=False):
     obs, info = env.reset()
     
     for i in tqdm(range(num_frames), desc="Collecting frames"):
-        # 獲取畫面
+        # Get the frame
         frame = env.unwrapped.get_wrapper_attr("ale").getScreenRGB()
         frames.append(frame)
         
-        # 隨機動作
+        # Random action
         action = env.action_space.sample()
         actions.append(action)
         
@@ -265,34 +264,34 @@ def collect_pong_data(num_frames=1000, view=False):
     actions = np.array(actions)
     
     print(f"✅ Data collection complete.")
-    print(f"   - Frames shape: {frames.shape}")
-    print(f"   - Actions shape: {actions.shape}")
+    print(f"    - Frames shape: {frames.shape}")
+    print(f"    - Actions shape: {actions.shape}")
     
     return frames, actions
 
 
 def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints'):
-    """訓練 Autoencoder"""
+    """Trains the Autoencoder"""
     print("\n" + "=" * 70)
     print("🚀 Start training Autoencoder")
     print("=" * 70)
     
-    # 創建目錄
+    # Create directory
     os.makedirs(save_dir, exist_ok=True)
     
-    # 分割訓練/驗證集
+    # Split training/validation sets
     split_idx = int(len(frames) * 0.9)
     train_frames = frames[:split_idx]
     val_frames = frames[split_idx:]
     
-    # 創建數據集
+    # Create datasets
     train_dataset = PongFrameDataset(train_frames)
     val_dataset = PongFrameDataset(val_frames)
     
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     
-    # 創建模型
+    # Create model
     encoder = create_encoder()
     decoder = create_decoder()
     trainer = AutoencoderTrainer(encoder, decoder)
@@ -301,7 +300,7 @@ def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints'):
     print(f"Number of training samples: {len(train_dataset)}")
     print(f"Number of validation samples: {len(val_dataset)}")
     
-    # 訓練
+    # Training loop
     best_val_loss = float('inf')
     
     for epoch in range(epochs):
@@ -310,61 +309,61 @@ def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints'):
         train_loss = trainer.train_epoch(train_loader)
         val_loss = trainer.validate(val_loader)
         
-        print(f"   Train Loss: {train_loss:.6f}")
-        print(f"   Val Loss: {val_loss:.6f}")
+        print(f"    Train Loss: {train_loss:.6f}")
+        print(f"    Val Loss: {val_loss:.6f}")
         
-        # 儲存最佳模型
+        # Save best model
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             trainer.save(os.path.join(save_dir, 'best_autoencoder.pth'))
-            print(f"   🌟 New best model!")
+            print(f"    🌟 New best model!")
         
-        # 定期儲存
+        # Save checkpoint periodically
         if (epoch + 1) % 10 == 0:
             trainer.save(os.path.join(save_dir, f'autoencoder_epoch_{epoch+1}.pth'))
     
-    # 繪製訓練曲線
+    # Plot training curves
     trainer.plot_losses(os.path.join(save_dir, 'autoencoder_curves.png'))
     
     return trainer
 
 
 def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='checkpoints'):
-    """訓練 DiT"""
+    """Trains the DiT"""
     print("\n" + "=" * 70)
     print("🌟 Start training DiT")
     print("=" * 70)
     
-    # 創建數據集（需要配對的 frame 和 action）
+    # Create dataset (requires paired frame and action)
     dataset = PongFrameDataset(frames, actions)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
-    # 創建模型
+    # Create model
     dit = create_dit()
     trainer = DiTTrainer(dit, encoder)
     
     print(f"\nDiT parameters: {sum(p.numel() for p in dit.parameters()):,}")
     print(f"Number of training samples: {len(dataset)}")
     
-    # 訓練
+    # Training loop
     for epoch in range(epochs):
         print(f"\n📍 Epoch {epoch+1}/{epochs}")
         
         train_loss = trainer.train_epoch(dataloader)
-        print(f"   Train Loss: {train_loss:.6f}")
+        print(f"    Train Loss: {train_loss:.6f}")
         
-        # 定期儲存
+        # Save checkpoint periodically
         if (epoch + 1) % 5 == 0:
             trainer.save(os.path.join(save_dir, f'dit_epoch_{epoch+1}.pth'))
     
-    # 儲存最終模型
+    # Save final model
     trainer.save(os.path.join(save_dir, 'dit_final.pth'))
     
     return trainer
 
 
 # ============================================================
-# 主程式
+# Main Program
 # ============================================================
 
 if __name__ == "__main__":
@@ -372,17 +371,17 @@ if __name__ == "__main__":
     print("🎮 Pong AI Training Pipeline")
     print("=" * 70)
     
-    # 設定
-    NUM_FRAMES = 5000  # 收集的畫面數量
-    AUTOENCODER_EPOCHS = 20  # Autoencoder 訓練輪數
-    DIT_EPOCHS = 15  # DiT 訓練輪數
+    # Settings
+    NUM_FRAMES = 5000  # Number of frames to collect
+    AUTOENCODER_EPOCHS = 20  # Number of Autoencoder training epochs
+    DIT_EPOCHS = 15  # Number of DiT training epochs
     BATCH_SIZE = 16
     
-    # Step 1: 收集數據
+    # Step 1: Collect Data
     print("\n📊 Step 1: Collecting Game Data")
     frames, actions = collect_pong_data(num_frames=NUM_FRAMES, view=False)
     
-    # Step 2: 訓練 Autoencoder
+    # Step 2: Train Autoencoder
     print("\n🔧 Step 2: Training Autoencoder")
     ae_trainer = train_autoencoder(
         frames, 
@@ -390,7 +389,7 @@ if __name__ == "__main__":
         batch_size=BATCH_SIZE
     )
     
-    # Step 3: 訓練 DiT
+    # Step 3: Train DiT
     print("\n✨ Step 3: Training DiT")
     dit_trainer = train_dit(
         frames, 
@@ -404,7 +403,7 @@ if __name__ == "__main__":
     print("🎉 Training complete!")
     print("=" * 70)
     print("\nModel saved to the checkpoints/ directory")
-    print("\n下一步:")
+    print("\nNext steps:")
     print("1. Check checkpoints/autoencoder_curves.png to review training performance")
     print("2. Use the trained model to generate new Pong frames")
     print("3. Try using DiT to generate a playable game!")
