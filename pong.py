@@ -53,24 +53,53 @@ class Pong:
             # Used to store encoded observations
             self.encoded_observations = []
 
+    def simulate(self, FRAMES=1000, COLLECT=False, CLOSE=True):
+        """
+        Runs a simulation for FRAMES amount of frames. If collecting, returns lists of the frames and actions taken at that frame
+        Args:
+            FRAMES (int): Number of frames.
+            COLLECT (bool): Flag to collect frames and actions.
+            CLOSE (bool): End the simulation after.
+        Returns:
+            Tuple [np.ndarray, np.ndarray] or None:
+            If `COLLECT` is True, returns:
+                - FRAMES (np.ndarray): List of RGB arrays representing frames of Pong.
+                - ACTIONS (list): List of action codes representing the action taken at
+                its respective frame.
+        """
+        if COLLECT:
+            DATA = []
+
+        for i in range(FRAMES):
+            start = self.env.unwrapped.get_wrapper_attr("ale").getScreenRGB()
+            action = self.getAction(start)
+
+            outcome, reward, terminated, truncated, info = self.env.step(action)
+
+            if COLLECT:
+                DATA.append((start, action, outcome))
+
+            if terminated or truncated:
+                start, info = self.env.reset()
+        if CLOSE:
+            self.env.close()
+        print(f"Finished running PONG for: {FRAMES} frames")
+
+        if COLLECT:
+            frames_t = np.array([s for (s, a, o) in DATA], dtype=np.uint8)   # (N, 210, 160, 3)
+            actions  = np.array([a for (s, a, o) in DATA], dtype=np.int64)   # (N,)
+            # frames_t1 = np.array([o for (s, a, o) in DATA], dtype=np.uint8)
+            return frames_t, actions
+
+
     def visualize(self, FRAMES=10):
         """Runs Pong at 30FPS for FRAMES amount of frames"""
         for i in range(FRAMES):
             # Get the RGB frame
             obs = self.env.unwrapped.get_wrapper_attr("ale").getScreenRGB()
-
-            # If using the encoder, encode the current frame
-            if self.use_encoder:
-                latent = encode_pong_observation(self.encoder, obs)
-                self.encoded_observations.append(latent)
-
-                # Display encoding information every 100 frames
-                if i % 100 == 0:
-                    print(
-                        f"Frame {i}: Latent representation shape = {latent.shape}")
             
             # Get our next action
-            action = self.getPlay() if self.PLAY else self.getAction(obs)
+            action = self.getAction(obs)
 
             obs, reward, terminated, truncated, info = self.env.step(action)
 
@@ -80,10 +109,6 @@ class Pong:
         self.env.close()
         print(f"Finished running PONG for: {FRAMES} frames")
 
-        if self.use_encoder:
-            print(
-                f"{len(self.encoded_observations)} observations were collected and encoded.")
-            self.save_encoded_observations()
 
     def save_encoded_observations(self, filename="encoded_observations.pt"):
         """Saves the encoded observations for later training use"""
@@ -113,7 +138,11 @@ class Pong:
         """
         Automatically get best action by calculating the position of the BALL when it intercepts the PADDLE and moving towards it
         """
-        #First check for random sample against our epsilon threshold
+        #If user is playing, return keyboard input
+        if self.PLAY:
+            return self.getPlay()
+
+        #Otherwise, computer policy: Check for random threshold
         if (np.random.rand() < self.EPS):
             return self.env.action_space.sample()
 
@@ -182,13 +211,13 @@ class Pong:
 # ============ Usage Example ============
 if __name__ == "__main__":
     print("=" * 60)
-    print("Pong with ViT Encoder Test")
+    print("Pong Test")
     print("=" * 60)
 
     # Create Pong instance and enable the encoder
-    game = Pong(VIEW=True, PLAY=False, use_encoder=True)
+    game = Pong(VIEW=True, PLAY=False)
 
     # Run for 300 frames to collect encoded data
-    game.visualize(FRAMES=300)
+    game.simulate(FRAMES=600)
 
     print("\n✅ Test completed!")

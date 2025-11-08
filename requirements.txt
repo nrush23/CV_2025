@@ -3,3 +3,5 @@ gymnasium
 keyboard
 numpy
 torch
+tqdm
+matplotlib

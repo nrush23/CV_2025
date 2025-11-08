@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 
 from encoder import create_encoder
 from decoder import create_decoder, create_dit, create_autoencoder
+from pong import Pong
 
 
 # ============================================================
@@ -230,38 +231,9 @@ class DiTTrainer:
 def collect_pong_data(num_frames=1000, view=False):
     """Collects Pong game data"""
     print(f"📊 Collecting {num_frames} frames of Pong data...")
-    
-    from pong import Pong
-    import gymnasium
-    import ale_py
-    
-    gymnasium.register_envs(ale_py)
-    render_mode = "human" if view else "rgb_array"
-    env = gymnasium.make("ALE/Pong-v5", render_mode=render_mode, frameskip=1)
-    
-    frames = []
-    actions = []
-    
-    obs, info = env.reset()
-    
-    for i in tqdm(range(num_frames), desc="Collecting frames"):
-        # Get the frame
-        frame = env.unwrapped.get_wrapper_attr("ale").getScreenRGB()
-        frames.append(frame)
-        
-        # Random action
-        action = env.action_space.sample()
-        actions.append(action)
-        
-        obs, reward, terminated, truncated, info = env.step(action)
-        
-        if terminated or truncated:
-            obs, info = env.reset()
-    
-    env.close()
-    
-    frames = np.array(frames)
-    actions = np.array(actions)
+
+    PONG = Pong(VIEW=view, PLAY=False, EPS=0.01)
+    frames, actions = PONG.simulate(num_frames, True)
     
     print(f"✅ Data collection complete.")
     print(f"    - Frames shape: {frames.shape}")
