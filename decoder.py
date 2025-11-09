@@ -348,6 +348,18 @@ class DiT(nn.Module):
         pred_latent = self.final_proj(x)  # (batch, n_patches, latent_dim)
         
         return pred_latent
+    
+    #TODO: Implement this to use the trained model weights to predict based off a single frame and action
+    def inference(self, start, action):
+        """
+        Predicts the next frame from the given start and action and returns its encoded latent space representation.
+        Args:
+            start (np.ndarray): RGB array of a Pong Window frame, shape (210, 160, 3).
+            action (int): Pong action key, range is [0,5].
+        Returns:
+            prediction (tensor): Encoded prediction, tensor with shape (batch, n_patches, latent_dim).
+        """
+        pass
 
 
 # ============================================================

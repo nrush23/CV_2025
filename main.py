@@ -33,37 +33,25 @@ def main():
     DE = args.DiT
     BATCHES = args.Batches
     LOAD = args.Load
+    GAME = not (TRAIN or LOAD)
 
-    #Train to get model weights
-    if TRAIN:
-        #------ ORIGINAL SYNTAX -----#
-        # ae, dit = train.train(FRAMES, AE, DE, BATCHES)
-        #----------------------------#
-
-        #---------- TESTING ---------#
-        pipeline = Pipeline()
-        pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='testing')
-        #----------------------------#
-        
-    #Use preexisting weights to generate frames
-    elif LOAD:
-        DIT_PATH = "checkpoints/dit_final.pth"
-        AE_PATH = "checkpoints/best_autoencoder.pth"
-        try:
-            #Load weights for the autoencoder
-            AE_TRAINER = train.AutoencoderTrainer()
-            AE_TRAINER.load(AE_PATH)
-
-            #Load weights for the DiT
-            DIT_TRAINER = train.DiTTrainer(AE_TRAINER.autoencoder.encoder)
-            DIT_TRAINER.load(DIT_PATH)
-
-        except IOError:
-            raise FileNotFoundError()
-    else:
-        #Run the pong for FRAMES amount of frames (defaults to 300)
+    #Play the game if not training or loading (for now)
+    if GAME:
         game = Pong(VIEW, PLAY, EPS)
         game.simulate(FRAMES)
+    else:
+    #Make our pipeline and either train for weights or load from checkpoints
+        pipeline = Pipeline()
+        if TRAIN:
+            pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='testing')
+        elif LOAD:
+            DIT_PATH = "checkpoints/dit_final.pth"
+            AE_PATH = "checkpoints/best_autoencoder.pth"
+            pipeline.load_weights(AE_PATH, DIT_PATH)
+        
+        #Run inference on one frame
+        pipeline.inference()
+
 
 
 if __name__ == "__main__":

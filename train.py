@@ -142,7 +142,7 @@ class AutoencoderTrainer:
             None
         """
         print("\n" + "=" * 70)
-        print("🚀 Start training Autoencoder")
+        print("Start training Autoencoder")
         print("=" * 70)
         
         # Create directory
@@ -215,7 +215,8 @@ class AutoencoderTrainer:
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.train_losses = checkpoint.get('train_losses', [])
         self.val_losses = checkpoint.get('val_losses', [])
-        print(f"✅ Model loaded from {path}")
+        # print(f"✅ Model loaded from {path}")
+        print(f"AE weights loaded from: {path}")
     
     def plot_losses(self, save_path='training_curves.png'):
         """Plots the training curves"""
@@ -338,7 +339,7 @@ class DiTTrainer:
         self.dit.load_state_dict(checkpoint['dit'])
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.train_losses = checkpoint.get('train_losses', [])
-        print(f"✅ DiT is loaded from {path}")
+        print(f"DiT weights loaded from: {path}")
 
 
 # ============================================================

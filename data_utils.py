@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 def train_val_split(dataset, p = 0.9):
     """Utility to split datasets into a training and validation set
     
@@ -14,3 +16,7 @@ def train_val_split(dataset, p = 0.9):
     val_set = dataset[split_idx:]
 
     return train_set, val_set
+
+def save_img(frame):
+    assert frame.shape == (210, 160, 3)
+    plt.imsave("generated/test.png", frame)

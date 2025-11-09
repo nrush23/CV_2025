@@ -174,11 +174,13 @@ class ViTEncoder(nn.Module):
         # Adjust dimensions: (H, W, C) -> (1, C, H, W)
         if frame.dim() == 3:
             frame = frame.permute(2, 0, 1).unsqueeze(0)
+        elif frame.size(dim=1) != 3:
+            frame = frame.permute(0, 3, 1, 2)
         
         # Normalize to [0, 1]
         if frame.max() > 1.0:
             frame = frame / 255.0
-        
+        frame = frame.to(next(self.parameters()).device)
         with torch.no_grad():
             latent = self.forward(frame)
         
