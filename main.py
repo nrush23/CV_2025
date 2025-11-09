@@ -38,11 +38,19 @@ def main():
         ae, dit = train.train(FRAMES, AE, DE, BATCHES)
     #Use preexisting weights to generate frames
     elif LOAD:
-        PATH = "checkpoints/dit_final.pth"
+        DIT_PATH = "checkpoints/dit_final.pth"
+        AE_PATH = "checkpoints/best_autoencoder.pth"
         try:
-            WEIGHTS = open(PATH, "r")
+            #Load weights for the autoencoder
+            AE_TRAINER = train.AutoencoderTrainer()
+            AE_TRAINER.load(AE_PATH)
+
+            #Load weights for the DiT
+            DIT_TRAINER = train.DiTTrainer(AE_TRAINER.autoencoder.encoder)
+            DIT_TRAINER.load(DIT_PATH)
+
         except IOError:
-            raise FileNotFoundError(f"{PATH!r} not found")
+            raise FileNotFoundError()
     else:
         #Run the pong for FRAMES amount of frames (defaults to 10)
         game = Pong(VIEW, PLAY, EPS)

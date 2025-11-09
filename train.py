@@ -12,7 +12,7 @@ import os
 import matplotlib.pyplot as plt
 
 from encoder import create_encoder
-from decoder import create_decoder, create_dit, create_autoencoder
+from decoder import create_decoder, create_dit
 from pong import Pong
 
 
@@ -57,12 +57,47 @@ class PongFrameDataset(Dataset):
 
 
 # ============================================================
+# Part 3: Full Autoencoder (Encoder + Decoder)
+# ============================================================
+
+class PongAutoencoder(nn.Module):
+    """
+    Full Autoencoder for Pong
+    Combines Encoder and Decoder
+    """
+    def __init__(self, encoder, decoder):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+    
+    def forward(self, x):
+        """
+        Args:
+            x: (batch, 3, 210, 160) - Original frame
+            
+        Returns:
+            recon: (batch, 3, 210, 160) - Reconstructed frame
+            latent: (batch, n_patches, latent_dim) - Latent representation
+        """
+        latent = self.encoder(x)
+        recon = self.decoder(latent)
+        return recon, latent
+
+def create_autoencoder(encoder=None, decoder=None):
+    """Creates the full Autoencoder"""
+    if encoder is None:
+        encoder = create_encoder()
+    if decoder is None:
+        decoder = create_decoder()
+    return PongAutoencoder(encoder, decoder)
+
+# ============================================================
 # Stage 1: Train Autoencoder
 # ============================================================
 
 class AutoencoderTrainer:
     """Autoencoder Trainer"""
-    def __init__(self, encoder, decoder, device='cuda' if torch.cuda.is_available() else 'cpu'):
+    def __init__(self, encoder=None, decoder=None, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.device = device
         self.autoencoder = create_autoencoder(encoder, decoder).to(device)
         self.optimizer = optim.AdamW(self.autoencoder.parameters(), lr=1e-4, weight_decay=0.01)
@@ -152,9 +187,9 @@ class AutoencoderTrainer:
 
 class DiTTrainer:
     """DiT Trainer"""
-    def __init__(self, dit, encoder, device='cuda' if torch.cuda.is_available() else 'cpu'):
+    def __init__(self, encoder, dit=None, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.device = device
-        self.dit = dit.to(device)
+        self.dit = create_dit() if dit is None else dit.to(device)
         self.encoder = encoder.to(device)
         self.encoder.eval()  # Encoder is already trained, set to evaluation mode
         
@@ -312,7 +347,7 @@ def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='chec
     
     # Create model
     dit = create_dit()
-    trainer = DiTTrainer(dit, encoder)
+    trainer = DiTTrainer(encoder, dit)
     
     print(f"\nDiT parameters: {sum(p.numel() for p in dit.parameters()):,}")
     print(f"Number of training samples: {len(dataset)}")
