@@ -129,6 +129,57 @@ class AutoencoderTrainer:
         self.train_losses.append(avg_loss)
         return avg_loss
     
+    def train(self, train_dataset, val_dataset, epochs=50, batch_size=32, save_dir='checkpoints'):
+        """
+        Trains the Autoencoder using the given training and validation datasets, epochs, and batch_size
+        Args:
+            train_dataset (np.ndarray): Training set of frames of shape (N, 210, 160, 3)
+            val_dataset (np.ndarray): Validation set of frames of shape (K, 210, 160, 3)
+            epochs (int): Number of epochs.
+            batch_size (int): Number of batches.
+            save_dir (string): Folder location to save files.
+        Returns:
+            None
+        """
+        print("\n" + "=" * 70)
+        print("🚀 Start training Autoencoder")
+        print("=" * 70)
+        
+        # Create directory
+        os.makedirs(save_dir, exist_ok=True)
+        
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        
+        print(f"\nModel parameters: {sum(p.numel() for p in self.autoencoder.parameters()):,}")
+        print(f"Number of training samples: {len(train_dataset)}")
+        print(f"Number of validation samples: {len(val_dataset)}")
+        
+        # Training loop
+        best_val_loss = float('inf')
+        
+        for epoch in range(epochs):
+            print(f"\n📍 Epoch {epoch+1}/{epochs}")
+            
+            train_loss = self.train_epoch(train_loader)
+            val_loss = self.validate(val_loader)
+            
+            print(f"    Train Loss: {train_loss:.6f}")
+            print(f"    Val Loss: {val_loss:.6f}")
+            
+            # Save best model
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                self.save(os.path.join(save_dir, 'best_autoencoder.pth'))
+                print(f"    🌟 New best model!")
+            
+            # Save checkpoint periodically
+            if (epoch + 1) % 10 == 0:
+                self.save(os.path.join(save_dir, f'autoencoder_epoch_{epoch+1}.pth'))
+        
+        # Plot training curves
+        self.plot_losses(os.path.join(save_dir, 'autoencoder_curves.png'))
+    
     def validate(self, dataloader):
         """Validation"""
         self.autoencoder.eval()
@@ -189,7 +240,7 @@ class DiTTrainer:
     """DiT Trainer"""
     def __init__(self, encoder, dit=None, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.device = device
-        self.dit = create_dit() if dit is None else dit.to(device)
+        self.dit = create_dit().to(device) if dit is None else dit.to(device)
         self.encoder = encoder.to(device)
         self.encoder.eval()  # Encoder is already trained, set to evaluation mode
         
@@ -241,6 +292,37 @@ class DiTTrainer:
         self.train_losses.append(avg_loss)
         return avg_loss
     
+    def train(self, dataset, epochs=30, batch_size=32, save_dir='checkpoints'):
+        """Trains the DiT"""
+        print("\n" + "=" * 70)
+        print("🌟 Start training DiT")
+        print("=" * 70)
+        
+        # Create dataset (requires paired frame and action)
+        # dataset = PongFrameDataset(frames, actions)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        
+        # # Create model
+        # dit = create_dit()
+        # trainer = DiTTrainer(self.encoder, dit)
+        
+        print(f"\nDiT parameters: {sum(p.numel() for p in self.dit.parameters()):,}")
+        print(f"Number of training samples: {len(dataset)}")
+        
+        # Training loop
+        for epoch in range(epochs):
+            print(f"\n📍 Epoch {epoch+1}/{epochs}")
+            
+            train_loss = self.train_epoch(dataloader)
+            print(f"    Train Loss: {train_loss:.6f}")
+            
+            # Save checkpoint periodically
+            if (epoch + 1) % 5 == 0:
+                self.save(os.path.join(save_dir, f'dit_epoch_{epoch+1}.pth'))
+        
+        # Save final model
+        self.save(os.path.join(save_dir, 'dit_final.pth'))
+    
     def save(self, path):
         """Saves the model"""
         torch.save({
@@ -264,7 +346,15 @@ class DiTTrainer:
 # ============================================================
 
 def collect_pong_data(num_frames=1000, view=False):
-    """Collects Pong game data"""
+    """Collects Pong game data
+    Args:
+        num_frames (int): Number of frames to collect from ALE.
+        view (bool): Display the frames in real time, default false.
+    Returns:
+        Tuple (frames, actions):
+        - frames (np.ndarray): Np array of the frames with shape (N, 210, 160, 3).
+        - actions (np.ndarray): Np array of the actions associated at each frame with shape (N, ).  
+    """
     print(f"📊 Collecting {num_frames} frames of Pong data...")
 
     PONG = Pong(VIEW=view, PLAY=False, EPS=0.01)

@@ -64,7 +64,7 @@ class Pong:
             Tuple [np.ndarray, np.ndarray] or None:
             If `COLLECT` is True, returns:
                 - FRAMES (np.ndarray): List of RGB arrays representing frames of Pong.
-                - ACTIONS (list): List of action codes representing the action taken at
+                - ACTIONS (np.ndarray): List of action codes representing the action taken at
                 its respective frame.
         """
         if COLLECT:

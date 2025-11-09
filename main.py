@@ -1,13 +1,14 @@
 import argparse, os
 from pong import Pong
 import train
+from pipeline import Pipeline
 
 def main():
     """ Load Pong and our model to begin training
 
         Command Line Arguments:
-        -f || --Frames --> type int, how many frames we run ALE Pong for (Default 10)
-        -v || --View --> bool flag, do you want to see the human view (Default true)
+        -f || --Frames --> type int, how many frames we run ALE Pong for (Default 300)
+        -v || --View --> bool flag, do you want to see the human view (Default false)
     """
 
     parser = argparse.ArgumentParser()
@@ -35,7 +36,15 @@ def main():
 
     #Train to get model weights
     if TRAIN:
-        ae, dit = train.train(FRAMES, AE, DE, BATCHES)
+        #------ ORIGINAL SYNTAX -----#
+        # ae, dit = train.train(FRAMES, AE, DE, BATCHES)
+        #----------------------------#
+
+        #---------- TESTING ---------#
+        pipeline = Pipeline()
+        pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='testing')
+        #----------------------------#
+        
     #Use preexisting weights to generate frames
     elif LOAD:
         DIT_PATH = "checkpoints/dit_final.pth"
@@ -52,7 +61,7 @@ def main():
         except IOError:
             raise FileNotFoundError()
     else:
-        #Run the pong for FRAMES amount of frames (defaults to 10)
+        #Run the pong for FRAMES amount of frames (defaults to 300)
         game = Pong(VIEW, PLAY, EPS)
         game.simulate(FRAMES)
 
