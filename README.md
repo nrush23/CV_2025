@@ -1,5 +1,10 @@
 # CV Project 2025
 Computer Vision Fall 2025 project for generating frames of Pong or Tetris based off of key board actions in real time.
+<p align="center">
+    <img src="assets/test.png" alt="Latest generation" height="200">
+    <p align=center>Latest DiT generation<br><i>python main.py -f 10000 -t -ae 25 -de 25 -b 32</i></p>
+</p>
+
 ## Quickstart
 Inside the project folder, run the following
 - **Windows:**  
@@ -31,11 +36,16 @@ The following commands should open an ALE Atari Pong window with the green paddl
 6. Now install the required libraries:
     - ```pip install -r requirements.txt```
 7. Run commands:
-    - Main file: `python main.py [-f FRAMES] [-e EPSILON] [-v] [-p] [-h]`
+    - Main file: `python main.py [-f FRAMES] [-e EPSILON] [-v] [-p] [-h] [-t] [-ae AE_AMOUNT] [-de DIT_AMOUNT] [-b BATCHES] [-l]`
         - *f: Frames amount (Default 10)*
         - *v: View in window (Default true)*
         - *p: Player keyboard input mode (Default false)*
         - *e: Episolon probability to pick any random move (Default 0.01)*
+        - *t: Training mode (Default false, trains both Autoencoder and DiT)*
+        - *ae: Autoencoder epoch amount (Default 20)*
+        - *de: DiT epoch amount (Default 15)*
+        - *b: Batch amount (Default 16)*
+        - *l: Load weights from checkpoints (Default false)*
         - *h: Help*
     - Any file: `python file_name.py`
 8. When finished, deactivate your environment:
