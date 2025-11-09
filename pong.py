@@ -3,10 +3,6 @@ import ale_py
 import numpy as np
 import sys
 import keyboard
-import torch
-
-# Import our encoder components
-from encoder import create_encoder, encode_pong_observation
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -30,28 +26,23 @@ V_EPS = 0.001
 #--------------------------- DON'T DELETE ------------------------------#
 
 class Pong:
-    """ Pong interface with ViT Encoder integration """
-
-    def __init__(self, VIEW=True, PLAY=False, EPS=0.01, use_encoder=False):
+    """
+    Pong interface with ViT Encoder integration
+    Args:
+        VIEW (bool): Displays Pong simulation, defaults to True.
+        PLAY (bool): Use keyboard input for action policy, defaults to False.
+        EPS (float): Epsilon probability to randomly choose a different action, defaults to 0.01.
+    """
+    def __init__(self, VIEW=True, PLAY=False, EPS=0.01):
         gymnasium.register_envs(ale_py)
         render_mode = "human" if (VIEW or PLAY) else "rgb_array"
         #-------------------- CRITICAL, LEAVE THIS ENV -------------------#
         self.env = gymnasium.make("ALE/Pong-v5", render_mode=render_mode, frameskip=1, repeat_action_probability=0.0)
+        #-----------------------------------------------------------------#
         self.env.reset()
         self.PLAY = PLAY
         self.PREV = None
         self.EPS = EPS
-
-        # Initialize the encoder (if required)
-        self.use_encoder = use_encoder
-        if self.use_encoder:
-            print("Initializing ViT Encoder...")
-            self.encoder = create_encoder()
-            self.encoder.eval()  # Set to evaluation mode
-            print("✅ Encoder is ready")
-
-            # Used to store encoded observations
-            self.encoded_observations = []
 
     def simulate(self, FRAMES=1000, COLLECT=False, CLOSE=True):
         """
@@ -91,37 +82,6 @@ class Pong:
             # frames_t1 = np.array([o for (s, a, o) in DATA], dtype=np.uint8)
             return frames_t, actions
 
-
-    def visualize(self, FRAMES=10):
-        """Runs Pong at 30FPS for FRAMES amount of frames"""
-        for i in range(FRAMES):
-            # Get the RGB frame
-            obs = self.env.unwrapped.get_wrapper_attr("ale").getScreenRGB()
-            
-            # Get our next action
-            action = self.getAction(obs)
-
-            obs, reward, terminated, truncated, info = self.env.step(action)
-
-            if terminated or truncated:
-                obs, info = self.env.reset()
-
-        self.env.close()
-        print(f"Finished running PONG for: {FRAMES} frames")
-
-
-    def save_encoded_observations(self, filename="encoded_observations.pt"):
-        """Saves the encoded observations for later training use"""
-        if not self.encoded_observations:
-            print("No observations were collected and encoded.")
-            return
-
-        # Stack all observations into a single tensor
-        encoded_tensor = torch.cat(self.encoded_observations, dim=0)
-        torch.save(encoded_tensor, filename)
-        print(f"✅ Saved encoded observations to {filename}")
-        print(f"    Shape: {encoded_tensor.shape}")
-
     # -----------------------------  getAction PHYSICS LOGIC  ---------------------------------- #
     #                                                                                            #
     #  Calculate where the BALL will intercept the PADDLE's X-COORD and move towards that point  #
@@ -137,6 +97,10 @@ class Pong:
     def getAction(self, obs):
         """
         Automatically get best action by calculating the position of the BALL when it intercepts the PADDLE and moving towards it
+        Args:
+            obs (np.ndarray): RGB array of the current state of the Pong window.
+        Returns:
+            action (int): Pong action key
         """
         #If user is playing, return keyboard input
         if self.PLAY:
@@ -169,7 +133,13 @@ class Pong:
         return 0
     
     def getBallLocation(self, obs):
-        """Given a current RGB stream of the pixels, identify the location of the ball. Note: The ball doesn't seem to generate until the 60th frame"""
+        """
+        Given a current RGB stream of the pixels, identify the location of the ball. Note: The ball doesn't seem to generate until the 60th frame
+        Args:
+            obs (np.ndarray): RGB array of the current state of the Pong window.
+        Returns:
+            location (np.ndarray or None): NP array consisting of the top left corner and bottom right corner of the BALL, defaults to None if not rendered.
+        """
 
         # Get a mask where the values match our color
         color_mask = (obs == BALL_COLOR).all(axis=2)
@@ -187,7 +157,13 @@ class Pong:
         return None
 
     def getPaddleLocation(self, obs):
-        """Helper function to determine the position of the GREEN Paddle. Note: GREEN paddle seems to load on the 3rd frame"""
+        """
+        Helper function to determine the position of the GREEN Paddle. Note: GREEN paddle seems to load on the 3rd frame
+        Args:
+            obs (np.ndarray): RGB array of the current state of the Pong window.
+        Returns:
+            location (np.ndarray or None): NP array consisting of the top left corner and bottom right corner of the PADDLE, defaults to None if not rendered.
+        """
 
         color_mask = (obs == PADDLE_COLOR).all(axis=2)
         indices = np.argwhere(color_mask)
@@ -200,7 +176,11 @@ class Pong:
         return None
 
     def getPlay(self):
-        """If player controlled, check keyboard inputs for actions"""
+        """
+        If player controlled, check keyboard inputs for actions
+        Args:
+        Returns:
+            action (int): Action associated with a specific key (W/S, UP/DOWN)"""
         if keyboard.is_pressed('w') or keyboard.is_pressed('up'):
             return 2
         elif keyboard.is_pressed('s') or keyboard.is_pressed('down'):

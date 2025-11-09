@@ -4,7 +4,17 @@ from pong import Pong
 import data_utils as utils
 
 class Pipeline():
-    """Pipeline class to put together our train components for training and inference"""
+    """
+    Pipeline class to put together our train components for training and inference
+    Args:
+        encoder (ViTEncoder): Encoder to be used in our model.
+        decoder (ViTDecoder): Decoder to be used in our model.
+        dit (DiT): DiT to be used in our model.
+        view (bool): Display Pong simulation, defaults to False.
+        play (bool): Use keyboard input for training, defaults to False.
+        eps (float): Epsilon value to be used in the Pong interface for likelihood to choose a random action.
+        device (string): Device to be used for torch.
+    """
     def __init__(self, encoder=None, decoder=None, dit=None, view=False, play=False, eps=0.01, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.ae_trainer = AutoencoderTrainer(encoder=encoder, decoder=decoder, device=device)
         self.dit_trainer = DiTTrainer(encoder=self.ae_trainer.autoencoder.encoder, dit=dit, device=device)
