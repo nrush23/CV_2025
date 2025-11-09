@@ -54,7 +54,10 @@ Add any additional required libraries to the requirements.txt file
     - Right now, we have a Pong class which allows games to be visualized from computer choices or player choices as a demo. We need to implement additional separation or a new function to generate and return the next frame based on deciding the current action from the current frame.
 - [ ] **Finish implementing the model**  
     If we follow the OASIS pipeline, we need to make a *3 part system*: ```ViT-VAE Encoder -> DiT -> ViT-VAE Decoder```
-    ![Oasis Model Diagram](assets/OASIS_MODEL.png)  
+    <p align="center">
+    <img src="assets/OASIS_MODEL.png" alt="Oasis Model Diagram" width="400">
+    </p>  
+
     1. **ViT-VAE Encoder**  
     The ViT-VAE is for processing images to be sent into the DiT. It does no learning itself, just sets up our input to be used within the training model.  
     *General Procedure:*  
@@ -82,8 +85,10 @@ Add any additional required libraries to the requirements.txt file
     - Uses computer policy to automatically make best moves with a probability to do something random
         - When training, this will allow us to generate games with different levels of "expertise"
     - Has scaffold for using actions from the encoder if implemented in the future
-    ![Computer Policy for Training](assets/computer_policy.gif)
-- ✅ **First level ViT Encoder creation**
+    <p align="center">
+    <img src="assets/computer_policy.gif" alt="Computer Policy for Training" width="400">
+    </p>  
+- ✅ **First level ViT Encoder, DiT, ViT Decoder creation**
 - ✅ **Created a ```main.py``` file**:
     - Inside ```main.py```, we define different command line arguments to parse the following arguments:
         - *f: Frames amount (Default 10)*
@@ -92,6 +97,13 @@ Add any additional required libraries to the requirements.txt file
         - *e: Episolon probability to pick any random move (Default 0.01)*
         - *h: Help*
     - By default, no training is happening here. This code just calls the Pong interface to view a game with FRAMES length, Computer or Player control, and with an Epsilon probability for the Computer mode.
+- ✅ **Created a ```train.py``` file**:
+    - Inside ```train.py``` we define the different components of our model:
+        - *Pong Frame Dataset: Stores frames and actions for the model*
+        - *Autoencoder Trainer: Trains our autoencoder with a given decoder*
+        - *DiT Trainer: Trains our DiT for frame generation*
+        - *train: Callable train loop*
+
 
 ## Files
 | File  | Function |

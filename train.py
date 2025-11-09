@@ -333,6 +333,58 @@ def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='chec
     
     return trainer
 
+def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16):
+    """
+    Train our model on the specified amount of frames, epochs, and batch size.
+    Args:
+        NUM_FRAMES (int): Number of frames.
+        AUTOENCODER_EPOCHS (int): Autoencoder Epoch size.
+        DIT_EPOCHS (int): DIT Epoch size.
+        BATCH_SIZE (int): Batch size.
+    Returns:
+        Tuple (Autoencoder, DiT):
+            - Autoencoder (Encoder): Autoencoder used during training.
+            - DiT (DiT): DiT used during training.
+    """
+    print("=" * 70)
+    print("🎮 Pong AI Training Pipeline")
+    print("=" * 70)
+    
+    
+    # Step 1: Collect Data
+    print("\n📊 Step 1: Collecting Game Data")
+    frames, actions = collect_pong_data(num_frames=NUM_FRAMES, view=False)
+    
+    # Step 2: Train Autoencoder
+    print("\n🔧 Step 2: Training Autoencoder")
+    ae_trainer = train_autoencoder(
+        frames, 
+        epochs=AUTOENCODER_EPOCHS, 
+        batch_size=BATCH_SIZE
+    )
+    
+    # Step 3: Train DiT
+    print("\n✨ Step 3: Training DiT")
+    dit_trainer = train_dit(
+        frames, 
+        actions, 
+        ae_trainer.autoencoder.encoder,
+        epochs=DIT_EPOCHS,
+        batch_size=BATCH_SIZE
+    )
+    
+    print("\n" + "=" * 70)
+    print("🎉 Training complete!")
+    print("=" * 70)
+    print("\nModel saved to the checkpoints/ directory")
+    print("\nNext steps:")
+    print("1. Check checkpoints/autoencoder_curves.png to review training performance")
+    print("2. Use the trained model to generate new Pong frames")
+    print("3. Try using DiT to generate a playable game!")
+    return ae_trainer, dit_trainer
+
+
+
 
 # ============================================================
 # Main Program

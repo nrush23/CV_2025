@@ -438,7 +438,10 @@ if __name__ == "__main__":
     # ========== Test Decoder ==========
     print("\n📦 Part 1: Test ViT Decoder")
     print("-" * 70)
-    
+    PATH = "checkpoints/dit_final.pth"
+
+    weights = open(PATH, "r")
+
     decoder = create_decoder()
     decoder.eval()
     
