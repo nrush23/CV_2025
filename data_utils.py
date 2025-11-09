@@ -17,6 +17,11 @@ def train_val_split(dataset, p = 0.9):
 
     return train_set, val_set
 
-def save_img(frame):
+def save_img(frame, name='test'):
+    """
+    Utility to save images using matplotlib
+    Args:
+        frame (np.ndarray): RGB image, expecting numpy array with shape (H, W, C).
+        name (string): Name of the saved image, default is test"""
     assert frame.shape == (210, 160, 3)
     plt.imsave("generated/test.png", frame)
