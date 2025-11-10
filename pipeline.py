@@ -44,7 +44,7 @@ class Pipeline():
         
         return frames, actions
     
-    def load_weights(self, ae_path, dit_path):
+    def load_weights(self, ae_path=None, dit_path=None):
         """
         Loads the given path files as weights into the ae_trainer and dit_trainer.
         Args:
@@ -56,8 +56,10 @@ class Pipeline():
         try:
             #Try to load the given weights and set trained flag to True
             print("="*70)
-            self.ae_trainer.load(ae_path)
-            self.dit_trainer.load(dit_path)
+            if ae_path is not None:
+                self.ae_trainer.load(ae_path)
+            if dit_path is not None:
+                self.dit_trainer.load(dit_path)
             self.trained = True
             print("="*70)
         except IOError:
@@ -85,17 +87,20 @@ class Pipeline():
         print("\n📊 Step 1: Collecting Game Data")
         frames, actions = self.collect_pong_data(num_frames=NUM_FRAMES, view=False)
 
-        #Split into train and validation sets
-        train_set, val_set = utils.train_val_split(frames)
+        #If AUTOENCODER_EPOCHS is None, it means load previous weights and only
+        #train the DiT
+        if not self.trained:
+            #Split into train and validation sets
+            train_set, val_set = utils.train_val_split(frames)
 
-        #Convert to PongFrameDatasets
-        train_set = PongFrameDataset(train_set)
-        val_set = PongFrameDataset(val_set)
+            #Convert to PongFrameDatasets
+            train_set = PongFrameDataset(train_set)
+            val_set = PongFrameDataset(val_set)
 
-        #Step 2: Train Autoencoder
-        print("\n🔧 Step 2: Training Autoencoder")
+            #Step 2: Train Autoencoder
+            print("\n🔧 Step 2: Training Autoencoder")
 
-        self.ae_trainer.train(train_dataset=train_set, val_dataset=val_set, epochs=AUTOENCODER_EPOCHS, batch_size=BATCH_SIZE, save_dir=save_dir)
+            self.ae_trainer.train(train_dataset=train_set, val_dataset=val_set, epochs=AUTOENCODER_EPOCHS, batch_size=BATCH_SIZE, save_dir=save_dir)
 
         #Create DiT dataset
         dit_dataset = PongFrameDataset(frames=frames, actions=actions)
@@ -129,16 +134,27 @@ class Pipeline():
         frames, actions = self.collect_pong_data(num_frames=1, view=False)
 
         torch.set_grad_enabled(False)
-        encoded = self.ae_trainer.autoencoder.encoder.encode_frame(frames)
+        latent = self.ae_trainer.autoencoder.encoder.encode_frame(frames)
 
-        timestep = torch.tensor([0], dtype=torch.long, device=self.device)
+        # timestep = torch.tensor([0], dtype=torch.long, device=self.device)
+        timestep = torch.randint(0, 1000, (1,), device=self.device)
         actions = torch.tensor(actions, dtype=torch.long, device=self.device)
-        pred_encod = self.dit_trainer.dit(encoded, timestep, actions)
+        
+        #True noisy image
+        noisy_latent, noise = self.dit_trainer.add_noise(latent=latent, timesteps=timestep)
+        #Predicted noise
+        eps_hat = self.dit_trainer.dit(noisy_latent, timestep, actions)
+        
+        #Undo noise on prediction
+        latent_hat = self.dit_trainer.remove_noise(noisy_latent=noisy_latent, timesteps=timestep, noise=eps_hat)
+        
+        #Decode
+        pred = self.ae_trainer.autoencoder.decoder(latent_hat)
 
-        pred = self.ae_trainer.autoencoder.decoder(pred_encod)
-
+        #Convert back to standard RGB (210, 160, 3)
         pred = pred.permute(0, 2, 3, 1).squeeze(0).cpu().numpy()
 
+        #Save image
         utils.save_img(pred)
         print("Image saved.")
         print("="*70)

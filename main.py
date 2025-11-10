@@ -17,6 +17,7 @@ def main():
     parser.add_argument("-p", "--Play", action='store_true', help="Determines whether the user plays or not")
     parser.add_argument("-e", "--Epsilon", type=float, default=0.01, help="Epsilon value for Computer to randomly choose a different move")
     parser.add_argument("-t", "--Train", action='store_true', help="Training mode")
+    parser.add_argument("-d", "--DiT_Only", action='store_true', help="Train only the DiT")
     parser.add_argument("-ae", "--AutoEncod", type=int, default=20,help="Autoencoder epoch amount, default=20")
     parser.add_argument("-de", "--DiT", type=int, default=15,help="DiT epoch amount, default=15")
     parser.add_argument("-b", "--Batches", type=int, default=16,help="Batch size amount, default=16")
@@ -33,6 +34,7 @@ def main():
     DE = args.DiT
     BATCHES = args.Batches
     LOAD = args.Load
+    DIT_ONLY = args.DiT_Only
     GAME = not (TRAIN or LOAD)
 
     #Play the game if not training or loading (for now)
@@ -45,8 +47,8 @@ def main():
         if TRAIN:
             pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='testing')
         elif LOAD:
-            DIT_PATH = "checkpoints/dit_final.pth"
-            AE_PATH = "checkpoints/best_autoencoder.pth"
+            DIT_PATH = "testing/dit_final.pth"
+            AE_PATH = "testing/best_autoencoder.pth"
             pipeline.load_weights(AE_PATH, DIT_PATH)
         
         #Run inference on one frame

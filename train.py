@@ -258,6 +258,12 @@ class DiTTrainer:
         noisy_latent = alpha * latent + (1 - alpha) * noise
         return noisy_latent, noise
     
+    def remove_noise(self, noisy_latent, timesteps, noise):
+        """Removes noise (simplified diffusion)"""
+        alpha = 1.0 - timesteps.float().unsqueeze(-1).unsqueeze(-1) / 1000.0
+        latent = (noisy_latent - (1 - alpha) * noise) / alpha
+        return latent
+    
     def train_epoch(self, dataloader):
         """Trains for one epoch"""
         self.dit.train()
