@@ -2,6 +2,7 @@ import torch
 from train import PongFrameDataset, AutoencoderTrainer, DiTTrainer
 from pong import Pong
 import data_utils as utils
+import os
 
 class Pipeline():
     """
@@ -82,6 +83,7 @@ class Pipeline():
         print("🎮 Pong AI Training Pipeline")
         print("=" * 70)
         
+        os.makedirs(save_dir, exist_ok=True)
         
         #Collect NUM_FRAMES amount of frames
         print("\n📊 Step 1: Collecting Game Data")
@@ -89,7 +91,7 @@ class Pipeline():
 
         #If AUTOENCODER_EPOCHS is None, it means load previous weights and only
         #train the DiT
-        if not self.trained:
+        if AUTOENCODER_EPOCHS > 0:
             #Split into train and validation sets
             train_set, val_set = utils.train_val_split(frames)
 
@@ -101,15 +103,16 @@ class Pipeline():
             print("\n🔧 Step 2: Training Autoencoder")
 
             self.ae_trainer.train(train_dataset=train_set, val_dataset=val_set, epochs=AUTOENCODER_EPOCHS, batch_size=BATCH_SIZE, save_dir=save_dir)
+        
+        if DIT_EPOCHS > 0:
+            #Create DiT dataset
+            dit_dataset = PongFrameDataset(frames=frames, actions=actions)
 
-        #Create DiT dataset
-        dit_dataset = PongFrameDataset(frames=frames, actions=actions)
+            #Step 3: Train DiT
+            print("\n✨ Step 3: Training DiT")
+            self.dit_trainer.train(dataset=dit_dataset, epochs=DIT_EPOCHS, batch_size=BATCH_SIZE, save_dir=save_dir)
 
-        #Step 3: Train DiT
-        print("\n✨ Step 3: Training DiT")
-        self.dit_trainer.train(dataset=dit_dataset, epochs=DIT_EPOCHS, batch_size=BATCH_SIZE, save_dir=save_dir)
-
-        self.trained = True
+        self.trained = self.trained or (DIT_EPOCHS > 0 or AUTOENCODER_EPOCHS > 0)
 
         print("\n" + "=" * 70)
         print("🎉 Training complete!")
