@@ -22,7 +22,49 @@ pip install -r requirements.txt
 python main.py -f 300 -e 0.0
 ```
 The following commands should open an ALE Atari Pong window with the green paddle playing optimally. The window will close after 5 seconds (300 frames/60FPS = 5s).
-## Setup
+
+## Commands
+***Train your model***
+- Without preloading:
+
+        python main.py -t -f FRAMES -ae AE_EPOCHS -de DIT_EPOCHS -b BATCHES
+- With preloading:
+
+        python main.py -l -t -f FRAMES -ae AE_EPOCHS -de DIT_EPOCHS -b BATCHES
+
+*Note: Train only the `autoencoder` or the `DiT` by setting the other's epochs to 0*
+
+***Visualizing the game loop***
+- Computer policy:
+            
+        python main.py -f FRAMES -e EPSILON
+- Player Input:
+
+        python main.py -f FRAMES -p -e EPSILON
+
+## Flag Overview
+
+*General Syntax*
+
+`python main.py [-f FRAMES] [-e EPSILON] [-v] [-p] [-h] [-t] [-ae AE_AMOUNT] [-de DIT_AMOUNT] [-b BATCHES] [-l]`
+
+| Flag | Name | Type | Default | Description |
+| --- | --- | --- | --- | --- |
+| ```-f``` | Frames amount| int | ```10```|Number of frames to run simulation for|
+| ```-v``` | View in window | bool | ```false``` | Run simulation in window view |
+| ```-p``` | Player input mode | bool | ```false``` | Flag to use keyboard input |
+| ```-e``` | Epsilon probability | float | ```0.01``` | Probability to take a random action |
+| ```-t``` | Training mode | bool | ```false``` | Run training loop |
+| ```-ae``` | Autoencoder epochs | int | ```20``` | How many epochs to train the Autoencoder |
+| ```-de``` | DiT epochs | int | ```15``` | How many epochs to train the DiT |
+| ```-b``` | Batch amount | int | ```16``` | Batch size |
+| ```-l``` | Load model | bool | ```false``` | Loads weights from checkpoint files |
+| ```-h``` | Help | | | Shows args |
+
+
+
+
+## Detailed Setup
 1. Clone a copy of this repository to your local machine
 2. Open a terminal and navigate to the CV_2025 folder
 3. Once inside the CV_2025 folder, make a new python environment (this creates a new environment named venv):
@@ -37,16 +79,6 @@ The following commands should open an ALE Atari Pong window with the green paddl
     - ```pip install -r requirements.txt```
 7. Run commands:
     - Main file: `python main.py [-f FRAMES] [-e EPSILON] [-v] [-p] [-h] [-t] [-ae AE_AMOUNT] [-de DIT_AMOUNT] [-b BATCHES] [-l]`
-        - *f: Frames amount (Default 10)*
-        - *v: View in window (Default true)*
-        - *p: Player keyboard input mode (Default false)*
-        - *e: Episolon probability to pick any random move (Default 0.01)*
-        - *t: Training mode (Default false, trains both Autoencoder and DiT)*
-        - *ae: Autoencoder epoch amount (Default 20)*
-        - *de: DiT epoch amount (Default 15)*
-        - *b: Batch amount (Default 16)*
-        - *l: Load weights from checkpoints (Default false)*
-        - *h: Help*
     - Any file: `python file_name.py`
 8. When finished, deactivate your environment:
     - ```deactivate```
