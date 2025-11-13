@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import numpy as np
+import os
 
 def train_val_split(dataset, p = 0.9):
     """Utility to split datasets into a training and validation set
@@ -29,9 +32,90 @@ def save_img(frame, name='test'):
 def save_animation(frames, name='test'):
     """
     Utility to make an animation from a list of frames.
+    
     Args:
         frames (np.ndarray): Array of RGB frames, shape is (N, 210, 160, 3).
-        name (string): Name of the animation, default is test.
+        name (string): Name of the animation (without extension), default is 'test'.
+        fps (int): Frames per second for the animation, default is 30.
+        format (string): Output format - 'mp4' or 'gif', default is 'mp4'.
+    
     Returns:
-        None."""
-    pass
+        None. Saves animation to generated/{name}.{format}
+    
+    Example:
+        frames = np.random.randint(0, 255, (100, 210, 160, 3), dtype=np.uint8)
+        save_animation(frames, name='my_pong_game', fps=30, format='mp4')
+    """
+    fps = 30
+    format = 'mp4'
+    # check inputs
+    assert len(frames.shape) == 4, f"Expected 4D array (N, H, W, C), got shape {frames.shape}"
+    assert frames.shape[1:] == (210, 160, 3), f"Expected frames with shape (N, 210, 160, 3), got {frames.shape}"
+    
+    # check generate directory
+    os.makedirs('generated', exist_ok=True)
+    
+    # check frames range
+    if frames.max() > 1.0:
+        frames = frames.astype(np.float32) / 255.0
+    
+    print(f"🎬 Creating animation with {len(frames)} frames at {fps} FPS...")
+    
+    # create figure and axis
+    fig, ax = plt.subplots(figsize=(8, 10.5))
+    ax.axis('off')
+    
+    # initialize image
+    im = ax.imshow(frames[0], animated=True)
+    
+    # update frame
+    def update_frame(frame_number):
+        im.set_array(frames[frame_number])
+        return [im]
+    
+    # create animation
+    anim = animation.FuncAnimation(
+        fig, 
+        update_frame, 
+        frames=len(frames),
+        interval=1000/fps,
+        blit=True,
+        repeat=True
+    )
+    
+    # save animation
+    output_path = f"generated/{name}.{format}"
+    
+    try:
+        if format == 'mp4':
+            # save as MP4
+            Writer = animation.writers['ffmpeg']
+            writer = Writer(fps=fps, metadata=dict(artist='Pong AI'), bitrate=1800)
+            anim.save(output_path, writer=writer)
+            
+        elif format == 'gif':
+            # save as GIF
+            anim.save(output_path, writer='pillow', fps=fps)
+            
+        else:
+            raise ValueError(f"Unsupported format: {format}. Use 'mp4' or 'gif'.")
+        
+        print(f"✅ Animation saved to {output_path}")
+        print(f"   Duration: {len(frames)/fps:.2f} seconds")
+        print(f"   Resolution: 210×160")
+        print(f"   Total frames: {len(frames)}")
+        
+    except Exception as e:
+        print(f"❌ Error saving animation: {e}")
+        
+        if format == 'mp4':
+            print("\n💡 Tip: MP4 format requires ffmpeg. Install it with:")
+            print("   - Windows: Download from https://ffmpeg.org/download.html")
+            print("   - Mac: brew install ffmpeg")
+            print("   - Linux: sudo apt-get install ffmpeg")
+            print("\n   Or try using format='gif' instead.")
+        
+        raise
+    
+    finally:
+        plt.close(fig) 
