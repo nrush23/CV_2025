@@ -21,6 +21,7 @@ def main():
     parser.add_argument("-de", "--DiT", type=int, default=15,help="DiT epoch amount, default=15")
     parser.add_argument("-b", "--Batches", type=int, default=16,help="Batch size amount, default=16")
     parser.add_argument("-l", "--Load", action="store_true", help="Loads a DiT from dit_final.pth")
+    parser.add_argument("-i", "--Inferences", type=int, default=90,help="Number of frames to run inference.")
     args = parser.parse_args()
 
     #Command line arguments
@@ -33,6 +34,7 @@ def main():
     DE = args.DiT
     BATCHES = args.Batches
     LOAD = args.Load
+    INFERENCES = args.Inferences
     GAME = not (TRAIN or LOAD)
 
     #Play the game if not training or loading (for now)
@@ -50,7 +52,7 @@ def main():
             pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='reloading')
         
         #Run inference on one frame
-        pipeline.inference()
+        pipeline.inference(INFERENCES)
 
 
 
