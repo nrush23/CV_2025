@@ -32,14 +32,17 @@ class Pong:
         VIEW (bool): Displays Pong simulation, defaults to True.
         PLAY (bool): Use keyboard input for action policy, defaults to False.
         EPS (float): Epsilon probability to randomly choose a different action, defaults to 0.01.
+        SEED (int): Seed for random number generation, defaults to None.
     """
-    def __init__(self, VIEW=True, PLAY=False, EPS=0.01):
+    def __init__(self, VIEW=True, PLAY=False, EPS=0.01, SEED=None):
         gymnasium.register_envs(ale_py)
         render_mode = "human" if (VIEW or PLAY) else "rgb_array"
         #-------------------- CRITICAL, LEAVE THIS ENV -------------------#
         self.env = gymnasium.make("ALE/Pong-v5", render_mode=render_mode, frameskip=1, repeat_action_probability=0.0)
         #-----------------------------------------------------------------#
-        self.env.reset()
+        np.random.seed(SEED)
+        self.env.reset(seed=SEED)
+        
         self.PLAY = PLAY
         self.PREV = None
         self.EPS = EPS
