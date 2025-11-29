@@ -26,7 +26,7 @@ def save_img(frame, name='test'):
         frame (np.ndarray): RGB image, expecting numpy array with shape (H, W, C).
         name (string): Name of the saved image, default is test"""
     assert frame.shape == (210, 160, 3)
-    plt.imsave("generated/test.png", frame)
+    plt.imsave(f"generated/{name}.png", frame)
 
 #TODO: Write code to create and save an animation to generated/ using matplotlib.animation
 def save_animation(frames, name='test'):

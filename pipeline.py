@@ -120,45 +120,55 @@ class Pipeline():
         print(f"\nModel saved to the {save_dir}/ directory")
 
     #TODO: Implement the inference pass using the ae_trainer and dit_trainer
-    def inference(self):
+    def inference(self, num_frames=20):
         """
         Inference function to begin generating a new frame from a start point and frame.
         Args:
             start (np.ndarray): RGB array of an initial Pong starting frame (will randomly generate if not given).
-            action (int): Integer action key to use from the Pale interface (will follow Pong settings for action).
+            num_frames (int): Number of frames to generate
         
         Returns:
-            frame (np.ndarray): Returns an RGB array of the next frame conditioned based on our inputs.
+            frames (np.ndarray): List of RGB arrays of generated frames.
         """
         print("="*70)
         assert self.trained, "No model loaded or trained."
-        print("Running inference on model")
+        print(f"Running inference on model for {num_frames} frames.")
 
-        frames, actions = self.collect_pong_data(num_frames=1, view=False)
+        frames = []
+        input, actions = self.collect_pong_data(num_frames=1, view=False)
+
+        latent = self.ae_trainer.autoencoder.encoder.encode_frame(input)
+        actions = torch.tensor(actions, dtype=torch.long, device=self.device)
 
         torch.set_grad_enabled(False)
-        latent = self.ae_trainer.autoencoder.encoder.encode_frame(frames)
 
-        # timestep = torch.tensor([0], dtype=torch.long, device=self.device)
-        timestep = torch.randint(0, 1000, (1,), device=self.device)
-        actions = torch.tensor(actions, dtype=torch.long, device=self.device)
-        
-        #True noisy image
-        noisy_latent, noise = self.dit_trainer.add_noise(latent=latent, timesteps=timestep)
-        #Predicted noise
-        eps_hat = self.dit_trainer.dit(noisy_latent, timestep, actions)
-        
-        #Undo noise on prediction
-        latent_hat = self.dit_trainer.remove_noise(noisy_latent=noisy_latent, timesteps=timestep, noise=eps_hat)
-        
-        #Decode
-        pred = self.ae_trainer.autoencoder.decoder(latent_hat)
+        for i in range(num_frames):
+            # timestep = torch.tensor([0], dtype=torch.long, device=self.device)
+            timestep = torch.randint(0, 1000, (1,), device=self.device)
+            
+            #True noisy image
+            noisy_latent, noise = self.dit_trainer.add_noise(latent=latent, timesteps=timestep)
+            #Predicted noise
+            eps_hat = self.dit_trainer.dit(noisy_latent, timestep, actions)
+            
+            #Undo noise on prediction
+            latent_hat = self.dit_trainer.remove_noise(noisy_latent=noisy_latent, timesteps=timestep, noise=eps_hat)
+            
+            #Decode
+            pred = self.ae_trainer.autoencoder.decoder(latent_hat)
 
-        #Convert back to standard RGB (210, 160, 3)
-        pred = pred.permute(0, 2, 3, 1).squeeze(0).cpu().numpy()
+            #Convert back to standard RGB (210, 160, 3)
+            pred = pred.permute(0, 2, 3, 1).squeeze(0).cpu().numpy()
+            
+            frames.append(torch.from_numpy(pred))
+            
+            latent = latent_hat
 
-        #Save image
-        utils.save_img(pred)
-        print("Image saved.")
+        #Save video
+        utils.save_animation(torch.stack(frames))
+        print("Saved animation.")
+
         print("="*70)
+
+        return frames
 
