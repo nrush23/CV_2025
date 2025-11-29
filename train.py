@@ -17,6 +17,66 @@ from pong import Pong
 
 
 # ============================================================
+# Visualization Helper
+# ============================================================
+
+def save_comparison_grid(original, reconstructed, epoch, save_dir, prefix='autoencoder', num_samples=8):
+    """
+    Saves a comparison grid of original vs reconstructed frames
+    Args:
+        original: Tensor (batch, 3, H, W) - Original frames
+        reconstructed: Tensor (batch, 3, H, W) - Reconstructed frames
+        epoch: Current epoch number
+        save_dir: Directory to save images
+        prefix: Prefix for filename
+        num_samples: Number of samples to display
+    """
+    os.makedirs(os.path.join(save_dir, 'visualizations'), exist_ok=True)
+    
+    # Take only num_samples
+    num_samples = min(num_samples, original.size(0))
+    original = original[:num_samples]
+    reconstructed = reconstructed[:num_samples]
+    
+    # Convert to numpy and denormalize
+    original_np = original.detach().cpu().permute(0, 2, 3, 1).numpy()
+    reconstructed_np = reconstructed.detach().cpu().permute(0, 2, 3, 1).numpy()
+    
+    # Clip to [0, 1] range
+    original_np = np.clip(original_np, 0, 1)
+    reconstructed_np = np.clip(reconstructed_np, 0, 1)
+    
+    # Create figure
+    fig, axes = plt.subplots(2, num_samples, figsize=(num_samples * 2, 4))
+    
+    # Handle case with single sample
+    if num_samples == 1:
+        axes = axes.reshape(2, 1)
+    
+    for i in range(num_samples):
+        # Original frame
+        axes[0, i].imshow(original_np[i])
+        axes[0, i].axis('off')
+        if i == 0:
+            axes[0, i].set_title('Original', fontsize=10)
+        
+        # Reconstructed frame
+        axes[1, i].imshow(reconstructed_np[i])
+        axes[1, i].axis('off')
+        if i == 0:
+            axes[1, i].set_title('Reconstructed', fontsize=10)
+    
+    plt.suptitle(f'{prefix.capitalize()} - Epoch {epoch}', fontsize=12, y=0.98)
+    plt.tight_layout()
+    
+    save_path = os.path.join(save_dir, 'visualizations', f'{prefix}_epoch_{epoch:03d}.png')
+    plt.savefig(save_path, dpi=100, bbox_inches='tight')
+    plt.close()
+    
+    print(f"    📸 Visualization saved to {save_path}")
+
+
+# ============================================================
 # Dataset
 # ============================================================
 
@@ -129,7 +189,8 @@ class AutoencoderTrainer:
         self.train_losses.append(avg_loss)
         return avg_loss
     
-    def train(self, train_dataset, val_dataset, epochs=50, batch_size=32, save_dir='checkpoints'):
+    def train(self, train_dataset, val_dataset, epochs=50, batch_size=32, save_dir='checkpoints', 
+              visualize_every=5):
         """
         Trains the Autoencoder using the given training and validation datasets, epochs, and batch_size
         Args:
@@ -138,6 +199,7 @@ class AutoencoderTrainer:
             epochs (int): Number of epochs.
             batch_size (int): Number of batches.
             save_dir (string): Folder location to save files.
+            visualize_every (int): Save visualizations every N epochs
         Returns:
             None
         """
@@ -155,6 +217,10 @@ class AutoencoderTrainer:
         print(f"Number of training samples: {len(train_dataset)}")
         print(f"Number of validation samples: {len(val_dataset)}")
         
+        # Get a fixed batch for visualization
+        val_iter = iter(val_loader)
+        viz_batch = next(val_iter).to(self.device)
+        
         # Training loop
         best_val_loss = float('inf')
         
@@ -166,6 +232,14 @@ class AutoencoderTrainer:
             
             print(f"    Train Loss: {train_loss:.6f}")
             print(f"    Val Loss: {val_loss:.6f}")
+            
+            # Save visualizations periodically
+            if (epoch + 1) % visualize_every == 0 or epoch == 0:
+                self.autoencoder.eval()
+                with torch.no_grad():
+                    reconstructed, _ = self.autoencoder(viz_batch)
+                    save_comparison_grid(viz_batch, reconstructed, epoch+1, save_dir, 
+                                       prefix='autoencoder', num_samples=8)
             
             # Save best model
             if val_loss < best_val_loss:
@@ -215,7 +289,6 @@ class AutoencoderTrainer:
         self.optimizer.load_state_dict(checkpoint['optimizer'])
         self.train_losses = checkpoint.get('train_losses', [])
         self.val_losses = checkpoint.get('val_losses', [])
-        # print(f"✅ Model loaded from {path}")
         print(f"AE weights loaded from: {path}")
     
     def plot_losses(self, save_path='training_curves.png'):
@@ -228,7 +301,7 @@ class AutoencoderTrainer:
         plt.title('Autoencoder Training Curves')
         plt.legend()
         plt.grid(True)
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=100, bbox_inches='tight')
         plt.close()
         print(f"✅ Training curves saved to {save_path}")
 
@@ -299,22 +372,35 @@ class DiTTrainer:
         self.train_losses.append(avg_loss)
         return avg_loss
     
-    def train(self, dataset, epochs=30, batch_size=32, save_dir='checkpoints'):
-        """Trains the DiT"""
+    def train(self, dataset, epochs=30, batch_size=32, save_dir='checkpoints', 
+              decoder=None, visualize_every=5):
+        """
+        Trains the DiT
+        Args:
+            dataset: Dataset with frames and actions
+            epochs: Number of epochs
+            batch_size: Batch size
+            save_dir: Directory to save checkpoints
+            decoder: Optional decoder for visualization
+            visualize_every: Save visualizations every N epochs
+        """
         print("\n" + "=" * 70)
         print("🌟 Start training DiT")
         print("=" * 70)
         
-        # Create dataset (requires paired frame and action)
-        # dataset = PongFrameDataset(frames, actions)
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-        
-        # # Create model
-        # dit = create_dit()
-        # trainer = DiTTrainer(self.encoder, dit)
         
         print(f"\nDiT parameters: {sum(p.numel() for p in self.dit.parameters()):,}")
         print(f"Number of training samples: {len(dataset)}")
+        
+        # Get a fixed batch for visualization (if decoder provided)
+        if decoder is not None:
+            decoder = decoder.to(self.device)
+            decoder.eval()
+            data_iter = iter(dataloader)
+            viz_frames, viz_actions = next(data_iter)
+            viz_frames = viz_frames.to(self.device)
+            viz_actions = viz_actions.to(self.device)
         
         # Training loop
         for epoch in range(epochs):
@@ -322,6 +408,26 @@ class DiTTrainer:
             
             train_loss = self.train_epoch(dataloader)
             print(f"    Train Loss: {train_loss:.6f}")
+            
+            # Save visualizations periodically
+            if decoder is not None and ((epoch + 1) % visualize_every == 0 or epoch == 0):
+                self.dit.eval()
+                with torch.no_grad():
+                    # Encode original frames
+                    original_latent = self.encoder(viz_frames)
+                    
+                    # Add noise and denoise using DiT
+                    timesteps = torch.zeros((viz_frames.size(0),), device=self.device, dtype=torch.long)
+                    noisy_latent, noise = self.add_noise(original_latent, timesteps)
+                    pred_noise = self.dit(noisy_latent, timesteps, viz_actions)
+                    predicted_latent = self.remove_noise(noisy_latent, timesteps, pred_noise)
+                    
+                    # Decode both
+                    original_recon = decoder(original_latent)
+                    predicted_recon = decoder(predicted_latent)
+                    
+                    save_comparison_grid(original_recon, predicted_recon, epoch+1, save_dir,
+                                       prefix='dit', num_samples=8)
             
             # Save checkpoint periodically
             if (epoch + 1) % 5 == 0:
@@ -374,7 +480,7 @@ def collect_pong_data(num_frames=1000, view=False):
     return frames, actions
 
 
-def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints'):
+def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints', visualize_every=5):
     """Trains the Autoencoder"""
     print("\n" + "=" * 70)
     print("🚀 Start training Autoencoder")
@@ -392,47 +498,20 @@ def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints'):
     train_dataset = PongFrameDataset(train_frames)
     val_dataset = PongFrameDataset(val_frames)
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    
     # Create model
     encoder = create_encoder()
     decoder = create_decoder()
     trainer = AutoencoderTrainer(encoder, decoder)
     
-    print(f"\nModel parameters: {sum(p.numel() for p in trainer.autoencoder.parameters()):,}")
-    print(f"Number of training samples: {len(train_dataset)}")
-    print(f"Number of validation samples: {len(val_dataset)}")
-    
-    # Training loop
-    best_val_loss = float('inf')
-    
-    for epoch in range(epochs):
-        print(f"\n📍 Epoch {epoch+1}/{epochs}")
-        
-        train_loss = trainer.train_epoch(train_loader)
-        val_loss = trainer.validate(val_loader)
-        
-        print(f"    Train Loss: {train_loss:.6f}")
-        print(f"    Val Loss: {val_loss:.6f}")
-        
-        # Save best model
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            trainer.save(os.path.join(save_dir, 'best_autoencoder.pth'))
-            print(f"    🌟 New best model!")
-        
-        # Save checkpoint periodically
-        if (epoch + 1) % 10 == 0:
-            trainer.save(os.path.join(save_dir, f'autoencoder_epoch_{epoch+1}.pth'))
-    
-    # Plot training curves
-    trainer.plot_losses(os.path.join(save_dir, 'autoencoder_curves.png'))
+    # Train with visualization
+    trainer.train(train_dataset, val_dataset, epochs=epochs, batch_size=batch_size,
+                 save_dir=save_dir, visualize_every=visualize_every)
     
     return trainer
 
 
-def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='checkpoints'):
+def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='checkpoints',
+              decoder=None, visualize_every=5):
     """Trains the DiT"""
     print("\n" + "=" * 70)
     print("🌟 Start training DiT")
@@ -440,32 +519,19 @@ def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='chec
     
     # Create dataset (requires paired frame and action)
     dataset = PongFrameDataset(frames, actions)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
     # Create model
     dit = create_dit()
     trainer = DiTTrainer(encoder, dit)
     
-    print(f"\nDiT parameters: {sum(p.numel() for p in dit.parameters()):,}")
-    print(f"Number of training samples: {len(dataset)}")
-    
-    # Training loop
-    for epoch in range(epochs):
-        print(f"\n📍 Epoch {epoch+1}/{epochs}")
-        
-        train_loss = trainer.train_epoch(dataloader)
-        print(f"    Train Loss: {train_loss:.6f}")
-        
-        # Save checkpoint periodically
-        if (epoch + 1) % 5 == 0:
-            trainer.save(os.path.join(save_dir, f'dit_epoch_{epoch+1}.pth'))
-    
-    # Save final model
-    trainer.save(os.path.join(save_dir, 'dit_final.pth'))
+    # Train with visualization
+    trainer.train(dataset, epochs=epochs, batch_size=batch_size, save_dir=save_dir,
+                 decoder=decoder, visualize_every=visualize_every)
     
     return trainer
 
-def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16):
+def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16, 
+          VISUALIZE_EVERY=5):
     """
     Train our model on the specified amount of frames, epochs, and batch size.
     Args:
@@ -473,6 +539,7 @@ def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16):
         AUTOENCODER_EPOCHS (int): Autoencoder Epoch size.
         DIT_EPOCHS (int): DIT Epoch size.
         BATCH_SIZE (int): Batch size.
+        VISUALIZE_EVERY (int): Save visualizations every N epochs.
     Returns:
         Tuple (Autoencoder, DiT):
             - Autoencoder (Encoder): Autoencoder used during training.
@@ -481,7 +548,6 @@ def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16):
     print("=" * 70)
     print("🎮 Pong AI Training Pipeline")
     print("=" * 70)
-    
     
     # Step 1: Collect Data
     print("\n📊 Step 1: Collecting Game Data")
@@ -492,7 +558,8 @@ def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16):
     ae_trainer = train_autoencoder(
         frames, 
         epochs=AUTOENCODER_EPOCHS, 
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
+        visualize_every=VISUALIZE_EVERY
     )
     
     # Step 3: Train DiT
@@ -502,20 +569,22 @@ def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16):
         actions, 
         ae_trainer.autoencoder.encoder,
         epochs=DIT_EPOCHS,
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
+        decoder=ae_trainer.autoencoder.decoder,
+        visualize_every=VISUALIZE_EVERY
     )
     
     print("\n" + "=" * 70)
     print("🎉 Training complete!")
     print("=" * 70)
     print("\nModel saved to the checkpoints/ directory")
+    print("Visualizations saved to checkpoints/visualizations/")
     print("\nNext steps:")
     print("1. Check checkpoints/autoencoder_curves.png to review training performance")
-    print("2. Use the trained model to generate new Pong frames")
-    print("3. Try using DiT to generate a playable game!")
+    print("2. Check checkpoints/visualizations/ to see reconstruction progress")
+    print("3. Use the trained model to generate new Pong frames")
+    print("4. Try using DiT to generate a playable game!")
     return ae_trainer, dit_trainer
-
-
 
 
 # ============================================================
@@ -532,6 +601,7 @@ if __name__ == "__main__":
     AUTOENCODER_EPOCHS = 20  # Number of Autoencoder training epochs
     DIT_EPOCHS = 15  # Number of DiT training epochs
     BATCH_SIZE = 16
+    VISUALIZE_EVERY = 5  # Save visualizations every N epochs
     
     # Step 1: Collect Data
     print("\n📊 Step 1: Collecting Game Data")
@@ -542,7 +612,8 @@ if __name__ == "__main__":
     ae_trainer = train_autoencoder(
         frames, 
         epochs=AUTOENCODER_EPOCHS, 
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
+        visualize_every=VISUALIZE_EVERY
     )
     
     # Step 3: Train DiT
@@ -552,14 +623,18 @@ if __name__ == "__main__":
         actions, 
         ae_trainer.autoencoder.encoder,
         epochs=DIT_EPOCHS,
-        batch_size=BATCH_SIZE
+        batch_size=BATCH_SIZE,
+        decoder=ae_trainer.autoencoder.decoder,
+        visualize_every=VISUALIZE_EVERY
     )
     
     print("\n" + "=" * 70)
     print("🎉 Training complete!")
     print("=" * 70)
     print("\nModel saved to the checkpoints/ directory")
+    print("Visualizations saved to checkpoints/visualizations/")
     print("\nNext steps:")
     print("1. Check checkpoints/autoencoder_curves.png to review training performance")
-    print("2. Use the trained model to generate new Pong frames")
-    print("3. Try using DiT to generate a playable game!")
+    print("2. Check checkpoints/visualizations/ to see reconstruction progress")
+    print("3. Use the trained model to generate new Pong frames")
+    print("4. Try using DiT to generate a playable game!")
