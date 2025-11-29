@@ -1,6 +1,5 @@
-import argparse, os
+import argparse
 from pong import Pong
-import train
 from pipeline import Pipeline
 
 def main():
