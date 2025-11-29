@@ -1,5 +1,5 @@
 import torch
-from train import PongFrameDataset, AutoencoderTrainer, DiTTrainer
+from train import PongDataset, PongFrameDataset, AutoencoderTrainer, DiTTrainer
 from pong import Pong
 import data_utils as utils
 import os
@@ -42,8 +42,10 @@ class Pipeline():
         print(f"✅ Data collection complete.")
         print(f"    - Frames shape: {frames.shape}")
         print(f"    - Actions shape: {actions.shape}")
+
+        data = [(frames[t], actions[t], frames[t+1]) for t in range(frames.shape[0] - 1)]
         
-        return frames, actions
+        return data
     
     def load_weights(self, ae_path=None, dit_path=None):
         """
@@ -87,11 +89,12 @@ class Pipeline():
         
         #Collect NUM_FRAMES amount of frames
         print("\n📊 Step 1: Collecting Game Data")
-        frames, actions = self.collect_pong_data(num_frames=NUM_FRAMES, view=False)
+        data = self.collect_pong_data(num_frames=NUM_FRAMES, view=False)
 
         #If AUTOENCODER_EPOCHS is None, it means load previous weights and only
         #train the DiT
         if AUTOENCODER_EPOCHS > 0:
+            frames, _, _ = zip(*data)
             #Split into train and validation sets
             train_set, val_set = utils.train_val_split(frames)
 
@@ -106,7 +109,7 @@ class Pipeline():
         
         if DIT_EPOCHS > 0:
             #Create DiT dataset
-            dit_dataset = PongFrameDataset(frames=frames, actions=actions)
+            dit_dataset = PongDataset(data)
 
             #Step 3: Train DiT
             print("\n✨ Step 3: Training DiT")
@@ -135,21 +138,23 @@ class Pipeline():
         print(f"Running inference on model for {num_frames} frames.")
 
         frames = []
-        input, actions = self.collect_pong_data(num_frames=1, view=False)
+        data = self.collect_pong_data(num_frames=2, view=False)
+        frame_t, action_t, frame_next = data[0]
 
-        latent = self.ae_trainer.autoencoder.encoder.encode_frame(input)
-        actions = torch.tensor(actions, dtype=torch.long, device=self.device)
+        latent_t = self.ae_trainer.autoencoder.encoder.encode_frame(frame_t)
+        action_t = torch.tensor([action_t], dtype=torch.long, device=self.device)
 
         torch.set_grad_enabled(False)
+        latent_t = self.ae_trainer.autoencoder.encoder.encode_frame(frame_t)
 
         for i in range(num_frames):
             # timestep = torch.tensor([0], dtype=torch.long, device=self.device)
             timestep = torch.randint(0, 1000, (1,), device=self.device)
             
             #True noisy image
-            noisy_latent, noise = self.dit_trainer.add_noise(latent=latent, timesteps=timestep)
+            noisy_latent, noise = self.dit_trainer.add_noise(latent=latent_t, timesteps=timestep)
             #Predicted noise
-            eps_hat = self.dit_trainer.dit(noisy_latent, timestep, actions)
+            eps_hat = self.dit_trainer.dit(noisy_latent, timestep, action_t, latent_t)
             
             #Undo noise on prediction
             latent_hat = self.dit_trainer.remove_noise(noisy_latent=noisy_latent, timesteps=timestep, noise=eps_hat)

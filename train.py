@@ -80,6 +80,30 @@ def save_comparison_grid(original, reconstructed, epoch, save_dir, prefix='autoe
 # Dataset
 # ============================================================
 
+class PongDataset(Dataset):
+    """Pong game dataset"""
+    def __init__(self, data):
+        """
+        Args:
+            data: List of tuples (frame_t, action_t, frame_{t+1})
+            - frame_t: RGB frame at time t with shape (210, 160, 3).
+            - action_t: Action at time t.
+            - frame_{t+1}: Next RGB frame with shape (210, 160, 3).
+        """
+        self.data = data
+        
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        frame_t, action_t, frame_next = self.data[idx]
+        
+        frame_t = torch.from_numpy(frame_t).float().permute(2, 0, 1) / 255.0
+        frame_next = torch.from_numpy(frame_next).float().permute(2, 0, 1) / 255.0
+        action_t = torch.tensor(action_t, dtype=torch.long)
+        
+        return frame_t, action_t, frame_next
+
 class PongFrameDataset(Dataset):
     """Pong game frame dataset"""
     def __init__(self, frames, actions=None):
@@ -342,21 +366,23 @@ class DiTTrainer:
         self.dit.train()
         total_loss = 0
         
-        for frames, actions in tqdm(dataloader, desc="Training DiT"):
-            frames = frames.to(self.device)
-            actions = actions.to(self.device)
+        for frame_t, action_t, frame_next in tqdm(dataloader, desc="Training DiT"):
+            frame_t = frame_t.to(self.device)
+            action_t = action_t.to(self.device)
+            frame_next = frame_next.to(self.device)
             
-            # 1. Encode the frame using the encoder
+            # 1. Encode the frame and next using the encoder
             with torch.no_grad():
-                latent = self.encoder(frames)
-            
+                latent_t = self.encoder(frame_t)
+                latent_next = self.encoder(frame_next)
+                            
             # 2. Add noise
-            batch_size = frames.shape[0]
+            batch_size = frame_t.shape[0]
             timesteps = torch.randint(0, 1000, (batch_size,), device=self.device)
-            noisy_latent, noise = self.add_noise(latent, timesteps)
+            noisy_latent, noise = self.add_noise(latent_next, timesteps)
             
             # 3. DiT predicts the noise
-            pred_noise = self.dit(noisy_latent, timesteps, actions)
+            pred_noise = self.dit(noisy_latent, timesteps, action_t, latent_t)
             
             # 4. Calculate the loss
             loss = self.criterion(pred_noise, noise)
@@ -464,9 +490,11 @@ def collect_pong_data(num_frames=1000, view=False):
         num_frames (int): Number of frames to collect from ALE.
         view (bool): Display the frames in real time, default false.
     Returns:
-        Tuple (frames, actions):
-        - frames (np.ndarray): Np array of the frames with shape (N, 210, 160, 3).
-        - actions (np.ndarray): Np array of the actions associated at each frame with shape (N, ).  
+        List of tuples (frame_t, action_t, frame_{t+1}):
+        - frame_t: RGB frame at time t with shape (210, 160, 3).
+        - action_t: Action at time t.
+        - frame_{t+1}: Next RGB frame with shape (210, 160, 3).
+
     """
     print(f"📊 Collecting {num_frames} frames of Pong data...")
 
@@ -476,8 +504,10 @@ def collect_pong_data(num_frames=1000, view=False):
     print(f"✅ Data collection complete.")
     print(f"    - Frames shape: {frames.shape}")
     print(f"    - Actions shape: {actions.shape}")
+
+    data = [(frames[t], actions[t], frames[t+1]) for t in range(frames.shape[0] - 1)]
     
-    return frames, actions
+    return data
 
 
 def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints', visualize_every=5):
@@ -510,7 +540,7 @@ def train_autoencoder(frames, epochs=50, batch_size=32, save_dir='checkpoints', 
     return trainer
 
 
-def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='checkpoints',
+def train_dit(data, encoder, epochs=30, batch_size=32, save_dir='checkpoints',
               decoder=None, visualize_every=5):
     """Trains the DiT"""
     print("\n" + "=" * 70)
@@ -518,7 +548,8 @@ def train_dit(frames, actions, encoder, epochs=30, batch_size=32, save_dir='chec
     print("=" * 70)
     
     # Create dataset (requires paired frame and action)
-    dataset = PongFrameDataset(frames, actions)
+    dataset = PongDataset(data)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     
     # Create model
     dit = create_dit()
@@ -551,8 +582,8 @@ def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16,
     
     # Step 1: Collect Data
     print("\n📊 Step 1: Collecting Game Data")
-    frames, actions = collect_pong_data(num_frames=NUM_FRAMES, view=False)
-    
+    data = collect_pong_data(num_frames=NUM_FRAMES, view=False)
+    frames, _, _ = zip(*data)
     # Step 2: Train Autoencoder
     print("\n🔧 Step 2: Training Autoencoder")
     ae_trainer = train_autoencoder(
@@ -565,8 +596,7 @@ def train(NUM_FRAMES=5000, AUTOENCODER_EPOCHS=20, DIT_EPOCHS=15, BATCH_SIZE=16,
     # Step 3: Train DiT
     print("\n✨ Step 3: Training DiT")
     dit_trainer = train_dit(
-        frames, 
-        actions, 
+        data, 
         ae_trainer.autoencoder.encoder,
         epochs=DIT_EPOCHS,
         batch_size=BATCH_SIZE,
@@ -605,7 +635,8 @@ if __name__ == "__main__":
     
     # Step 1: Collect Data
     print("\n📊 Step 1: Collecting Game Data")
-    frames, actions = collect_pong_data(num_frames=NUM_FRAMES, view=False)
+    data = collect_pong_data(num_frames=NUM_FRAMES, view=False)
+    frames, actions, _ = zip(*data)
     
     # Step 2: Train Autoencoder
     print("\n🔧 Step 2: Training Autoencoder")

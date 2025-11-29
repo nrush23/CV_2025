@@ -275,7 +275,8 @@ class DiT(nn.Module):
         self.num_actions = num_actions
         
         # 1. Project from latent space to embed space
-        self.latent_proj = nn.Linear(latent_dim, embed_dim)
+        self.latent_next_proj = nn.Linear(latent_dim, embed_dim)
+        self.latent_t_proj = nn.Linear(latent_dim, embed_dim)
         
         # 2. Timestep embedding (for diffusion)
         self.time_embed = nn.Sequential(
@@ -316,20 +317,20 @@ class DiT(nn.Module):
             elif isinstance(m, nn.Embedding):
                 nn.init.normal_(m.weight, std=0.02)
     
-    def forward(self, latent, timesteps, actions):
+    def forward(self, latent_next, timesteps, actions, latent_t):
         """
         Args:
-            latent: (batch, n_patches, latent_dim) - Latent representation of the current frame
+            latent_next: (batch, n_patches, latent_dim) - Noisy latent representation of the next frame
             timesteps: (batch,) - Diffusion timesteps
             actions: (batch,) - Player actions (0-5)
-            
+            latent_t: (batch, n_patches, latent_dim) - Latent representation of the current frame
         Returns:
             pred_latent: (batch, n_patches, latent_dim) - Predicted next frame latent representation
         """
-        batch_size, n_patches, _ = latent.shape
+        batch_size, n_patches, _ = latent_next.shape
         
         # 1. Project to embed space
-        x = self.latent_proj(latent)  # (batch, n_patches, embed_dim)
+        x = self.latent_next_proj(latent_next)  # (batch, n_patches, embed_dim)
         
         # 2. Add positional embedding
         x = x + self.pos_embed[:, :n_patches, :]
@@ -337,7 +338,8 @@ class DiT(nn.Module):
         # 3. Calculate conditional vector (timestep + action)
         time_emb = self.time_embed(timesteps)  # (batch, embed_dim)
         action_emb = self.action_embed(actions)  # (batch, embed_dim)
-        condition = time_emb + action_emb  # (batch, embed_dim)
+        latent_t_emb = self.latent_t_proj(latent_t).mean(dim=1)  # (batch, embed_dim)
+        condition = time_emb + action_emb + latent_t_emb # (batch, embed_dim)
         
         # 4. Pass through DiT blocks
         for block in self.blocks:
@@ -485,7 +487,8 @@ if __name__ == "__main__":
     print(f"- Total parameters: {sum(p.numel() for p in dit.parameters()):,}")
     
     # Test DiT
-    dummy_latent = torch.randn(2, 336, 128)  # 336 patches
+    dummy_latent_next = torch.randn(2, 336, 128)  # 336 patches
+    dummy_latent_t = torch.randn(2, 336, 128)  # 336 patches
     dummy_timesteps = torch.randint(0, 1000, (2,))
     dummy_actions = torch.randint(0, 6, (2,))
     
@@ -495,7 +498,7 @@ if __name__ == "__main__":
     print(f"- Actions: {dummy_actions}")
     
     with torch.no_grad():
-        pred_latent = dit(dummy_latent, dummy_timesteps, dummy_actions)
+        pred_latent = dit(dummy_latent_next, dummy_timesteps, dummy_actions, dummy_latent_t)
     
     print(f"\n✅ DiT prediction successful!")
     print(f"Output latent representation shape: {pred_latent.shape}")
