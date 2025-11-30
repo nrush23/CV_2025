@@ -39,11 +39,27 @@ class Pipeline():
         """
         print(f"📊 Collecting {num_frames} frames of Pong data...")
         if not self.trained:
-            assert num_frames % 10000 == 0, f"Set frame size to be a multiple of 10,000, currently {num_frames}."
             SEEDS = utils.load_seeds()
-            assert True == False, "Paused for seed tests."
+            index = -1
+            count = 0
+            frames = []
+            actions = []
+            while count < num_frames:
+                amount = min(10000, num_frames-count)
+                index = (index + 1) % len(SEEDS)
+                print(f"Switching to seed: {SEEDS[index]}")
+                self.pong.env.reset(seed=int(SEEDS[index])) #These two lines should probably be a wrapper function in pong
+                self.pong.PREV = None
 
-        frames, actions = self.pong.simulate(num_frames, True)
+                frames_batch, action_batch = self.pong.simulate(amount, COLLECT=True, CLOSE=False)
+                frames.append(frames_batch)
+                actions.append(action_batch)
+                count += amount
+            frames = np.concatenate(frames)
+            actions = np.concatenate(actions)
+            self.pong.env.close()
+        else:
+            frames, actions = self.pong.simulate(num_frames, COLLECT=True)
         print(f"✅ Data collection complete.")
         print(f"    - Frames shape: {frames.shape}")
         print(f"    - Actions shape: {actions.shape}")
@@ -178,7 +194,7 @@ class Pipeline():
             latent = latent_hat
 
         #Save video
-        utils.save_animation(torch.stack(frames), name='anim2', fps=10, format='gif')
+        utils.save_animation(torch.stack(frames), name='anim', fps=10, format='gif')
         print("Saved animation.")
 
         print("="*70)

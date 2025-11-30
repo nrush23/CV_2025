@@ -40,9 +40,9 @@ class Pong:
         #-------------------- CRITICAL, LEAVE THIS ENV -------------------#
         self.env = gymnasium.make("ALE/Pong-v5", render_mode=render_mode, frameskip=1, repeat_action_probability=0.0)
         #-----------------------------------------------------------------#
-        np.random.seed(SEED)
+        if SEED is not None:
+            np.random.seed(SEED)
         self.env.reset(seed=SEED)
-        
         self.PLAY = PLAY
         self.PREV = None
         self.EPS = EPS
