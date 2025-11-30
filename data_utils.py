@@ -33,7 +33,7 @@ def save_img(frame, name='test'):
 # TODO: Write code to create and save an animation to generated/ using matplotlib.animation
 
 
-def save_animation(frames, name='test'):
+def save_animation(frames, name='test', format='mp4', fps=30):
     """
     Utility to make an animation from a list of frames.
 
@@ -50,8 +50,6 @@ def save_animation(frames, name='test'):
         frames = np.random.randint(0, 255, (100, 210, 160, 3), dtype=np.uint8)
         save_animation(frames, name='my_pong_game', fps=30, format='mp4')
     """
-    fps = 30
-    format = 'mp4'
     # check inputs
     assert len(
         frames.shape) == 4, f"Expected 4D array (N, H, W, C), got shape {frames.shape}"
@@ -151,6 +149,7 @@ def generate_seeds(N=10):
     print(f"Finished generating {N} seeds.")
     print('='*70)
 
+
 def load_seeds():
     print('='*70)
     print("Loading seeds from seeds.txt...")
@@ -161,3 +160,17 @@ def load_seeds():
     return seeds
 
 
+def make_plot(x, y, title='X vs. Y', data_label='Data', x_label='X', y_label='Y', name='graph', save_dir='generated/'):
+    """Plots the training curves"""
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, f"{name}.png")
+    plt.figure(figsize=(10, 5))
+    plt.plot(x, y, label=data_label)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(save_path, dpi=100, bbox_inches='tight')
+    plt.close()
+    print(f"Graph saved to {save_path}")

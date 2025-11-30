@@ -48,7 +48,7 @@ def main():
             AE_PATH = 'testing/best_autoencoder.pth'
             pipeline.load_weights(AE_PATH, DIT_PATH)
         if TRAIN:
-            pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='reloading')
+            pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='seed_test')
         
         #Run inference on one frame
         pipeline.inference(INFERENCES)
