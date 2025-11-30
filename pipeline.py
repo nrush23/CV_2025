@@ -3,6 +3,9 @@ from train import PongDataset, PongFrameDataset, AutoencoderTrainer, DiTTrainer
 from pong import Pong
 import data_utils as utils
 import os
+import numpy as np
+
+from timeit import default_timer as timer
 
 class Pipeline():
     """
@@ -20,9 +23,9 @@ class Pipeline():
     def __init__(self, encoder=None, decoder=None, dit=None, view=False, play=False, eps=0.01, device='cuda' if torch.cuda.is_available() else 'cpu'):
         self.ae_trainer = AutoencoderTrainer(encoder=encoder, decoder=decoder, device=device)
         self.dit_trainer = DiTTrainer(encoder=self.ae_trainer.autoencoder.encoder, dit=dit, device=device)
-        self.pong = Pong(VIEW=view, PLAY=play, EPS=eps)
         self.trained = False
         self.device = device
+        self.pong = Pong(VIEW=view, PLAY=play, EPS=eps)
     
     def collect_pong_data(self, num_frames, view=False):
         """Collects Pong game data
@@ -35,10 +38,28 @@ class Pipeline():
             - actions (np.ndarray): Np array of the actions associated at each frame with shape (N, ).  
         """
         print(f"📊 Collecting {num_frames} frames of Pong data...")
+        if not self.trained:
+            SEEDS = utils.load_seeds()
+            index = -1
+            count = 0
+            frames = []
+            actions = []
+            while count < num_frames:
+                amount = min(10000, num_frames-count)
+                index = (index + 1) % len(SEEDS)
+                print(f"Switching to seed: {SEEDS[index]}")
+                self.pong.env.reset(seed=int(SEEDS[index])) #These two lines should probably be a wrapper function in pong
+                self.pong.PREV = None
 
-        # PONG = Pong(VIEW=view, PLAY=False, EPS=0.01)
-        frames, actions = self.pong.simulate(num_frames, True)
-        
+                frames_batch, action_batch = self.pong.simulate(amount, COLLECT=True, CLOSE=False)
+                frames.append(frames_batch)
+                actions.append(action_batch)
+                count += amount
+            frames = np.concatenate(frames)
+            actions = np.concatenate(actions)
+            self.pong.env.close()
+        else:
+            frames, actions = self.pong.simulate(num_frames, COLLECT=True)
         print(f"✅ Data collection complete.")
         print(f"    - Frames shape: {frames.shape}")
         print(f"    - Actions shape: {actions.shape}")
@@ -147,6 +168,12 @@ class Pipeline():
         torch.set_grad_enabled(False)
         latent_t = self.ae_trainer.autoencoder.encoder.encode_frame(frame_t)
 
+        #Latency testing setup
+
+        torch.cuda.synchronize()
+
+        latencies = []
+        start = timer()
         for i in range(num_frames):
             # timestep = torch.tensor([0], dtype=torch.long, device=self.device)
             timestep = torch.randint(0, 1000, (1,), device=self.device)
@@ -164,16 +191,27 @@ class Pipeline():
 
             #Convert back to standard RGB (210, 160, 3)
             pred = pred.permute(0, 2, 3, 1).squeeze(0).cpu().numpy()
-            
+            end = timer()
+            latencies.append(end - start)
+            start = end
             frames.append(torch.from_numpy(pred))
             
             latent = latent_hat
 
         #Save video
-        utils.save_animation(torch.stack(frames))
+        utils.save_animation(torch.stack(frames), name='anim', fps=10, format='gif')
         print("Saved animation.")
 
         print("="*70)
 
+        min_latency = np.argmin(latencies)
+        max_latency = np.argmax(latencies)
+        print("Latency Statistics:")
+        print(f"MIN({min_latency}): {latencies[min_latency]}")
+        print(f"MAX({max_latency}): {latencies[max_latency]}")
+        print(f"AVG: {np.mean(latencies)}")
+        print(f"STD: {np.std(latencies)}")
+
+        utils.make_plot(np.arange(num_frames), latencies, title='Latencies', data_label='Latency', x_label='Frame Index', y_label='Time (seconds)', name='latency', save_dir='generated')
         return frames
 
