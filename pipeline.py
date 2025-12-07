@@ -196,7 +196,7 @@ class Pipeline():
             start = end
             frames.append(torch.from_numpy(pred))
             
-            latent = latent_hat
+            latent_t = latent_hat
 
         #Save video
         utils.save_animation(torch.stack(frames), name='anim', fps=10, format='gif')
