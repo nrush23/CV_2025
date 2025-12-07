@@ -492,7 +492,7 @@ if __name__ == "__main__":
     dummy_timesteps = torch.randint(0, 1000, (2,))
     dummy_actions = torch.randint(0, 6, (2,))
     
-    print(f"\Input:")
+    print(f"Input:")
     print(f"- Latent representation shape: {dummy_latent.shape}")
     print(f"- Timesteps: {dummy_timesteps}")
     print(f"- Actions: {dummy_actions}")
