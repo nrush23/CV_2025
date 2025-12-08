@@ -242,7 +242,6 @@ class Pipeline():
                     running = False
                 else:
                     action = get_action_from_key(event)
-
             action_t = torch.tensor([action], dtype=torch.long, device=self.device)
             timestep = torch.randint(0, 1000, (1,), device=self.device)
             
@@ -276,5 +275,4 @@ def get_action_from_key(ev):
             return 2
         elif ev.key == pygame.K_DOWN or ev.key == pygame.K_s:
             return 3
-    else:
-        return 0
+    return 0
