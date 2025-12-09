@@ -4,6 +4,7 @@ from pong import Pong
 import data_utils as utils
 import os
 import numpy as np
+import pygame
 
 from timeit import default_timer as timer
 
@@ -148,7 +149,6 @@ class Pipeline():
         """
         Inference function to begin generating a new frame from a start point and frame.
         Args:
-            start (np.ndarray): RGB array of an initial Pong starting frame (will randomly generate if not given).
             num_frames (int): Number of frames to generate
         
         Returns:
@@ -170,7 +170,7 @@ class Pipeline():
 
         #Latency testing setup
 
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
 
         latencies = []
         start = timer()
@@ -215,3 +215,64 @@ class Pipeline():
         utils.make_plot(np.arange(num_frames), latencies, title='Latencies', data_label='Latency', x_label='Frame Index', y_label='Time (seconds)', name='latency', save_dir='generated')
         return frames
 
+    def inference_interactive(self):
+        """
+        Inference game mode to generate frames based on user action.
+        """
+        print("="*70)
+        assert self.trained, "No model loaded or trained."
+        print(f"Running inference on model in interactive loop.")
+
+        pygame.init()
+        screen = pygame.display.set_mode((160 * 3, 210 * 3))
+        clock = pygame.time.Clock()
+        running = True
+        action = 0
+        frame_count = 0
+
+        data = self.collect_pong_data(num_frames=2, view=False)
+        frame_t = data[0][0]
+
+        torch.set_grad_enabled(False)
+        latent_t = self.ae_trainer.autoencoder.encoder.encode_frame(frame_t)
+
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                else:
+                    action = get_action_from_key(event)
+            action_t = torch.tensor([action], dtype=torch.long, device=self.device)
+            timestep = torch.randint(0, 1000, (1,), device=self.device)
+            
+            noisy_latent, noise = self.dit_trainer.add_noise(latent=latent_t, timesteps=timestep)
+            eps_hat = self.dit_trainer.dit(noisy_latent, timestep, action_t, latent_t)
+            
+            # Undo noise on prediction
+            latent_hat = self.dit_trainer.remove_noise(noisy_latent=noisy_latent, timesteps=timestep, noise=eps_hat)
+            
+            # Decode, convert back to standard RGB (210, 160, 3)
+            pred = self.ae_trainer.autoencoder.decoder(latent_hat)
+            pred = pred.permute(0, 3, 2, 1).squeeze(0).cpu().numpy()
+            pred *= 255
+
+            # Display using pygame
+            surface = pygame.surfarray.make_surface(pred)
+            surface = pygame.transform.scale_by(surface, 3)
+            screen.blit(surface, (0,0))
+            pygame.display.flip()
+
+            clock.tick(30)
+            frame_count += 1
+
+            latent_t = latent_hat
+
+        print(f"Ran pygame inference for {frame_count} frames.")
+
+def get_action_from_key(ev):
+    if ev.type == pygame.KEYDOWN:
+        if ev.key == pygame.K_UP or ev.key == pygame.K_w:
+            return 2
+        elif ev.key == pygame.K_DOWN or ev.key == pygame.K_s:
+            return 3
+    return 0

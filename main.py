@@ -51,7 +51,10 @@ def main():
             pipeline.train(FRAMES, AE, DE, BATCHES, save_dir='seed_test')
         
         #Run inference on one frame
-        pipeline.inference(INFERENCES)
+        if PLAY:
+            pipeline.inference_interactive()
+        else:
+            pipeline.inference(INFERENCES)
 
 
 

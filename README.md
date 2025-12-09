@@ -42,6 +42,14 @@ The following commands should open an ALE Atari Pong window with the green paddl
 
         python main.py -f FRAMES -p -e EPSILON
 
+***Run model inference***
+- Generate video:
+
+        python main.py -l -i INFERENCE_FRAMES
+- Interactive game:
+
+        python main.py -l -p
+
 ## Flag Overview
 
 *General Syntax*
