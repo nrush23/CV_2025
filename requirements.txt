@@ -5,3 +5,26 @@ numpy
 torch
 tqdm
 matplotlib
+# OASIS-Pong Requirements
+
+# PyTorch
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Tensor operations
+einops>=0.7.0
+
+# Training utilities
+tqdm>=4.65.0
+
+# Visualization
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# Pong environment
+gymnasium>=0.29.0
+ale-py>=0.8.0
+
+# Optional: for video export
+# imageio>=2.31.0
+# imageio-ffmpeg>=0.4.8
