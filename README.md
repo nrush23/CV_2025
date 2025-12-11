@@ -50,6 +50,16 @@ The following commands should open an ALE Atari Pong window with the green paddl
 
         python main.py -l -p
 
+***Oasis version***
+- Train:
+
+        python main_oasis.py --mode train --frames FRAMES --vae-epochs AE_EPOCHS --dit-epochs DIT_EPOCHS --batch-size BATCHES --save-dir DIRECTORY
+
+- Generate Gif:
+
+        python main_oasis.py --mode inference --vae-path DIRECTORY/best_vae.pth --dit-path DIRECTORY/dit_final.pth --num-frames FRAMES --output animation.gif
+  
+
 ## Flag Overview
 
 *General Syntax*
