@@ -33,7 +33,7 @@ def save_img(frame, name='test'):
 # TODO: Write code to create and save an animation to generated/ using matplotlib.animation
 
 
-def save_animation(frames, name='test', format='mp4', fps=30):
+def save_animation(frames, name='test', path='generated', format='mp4', fps=30):
     """
     Utility to make an animation from a list of frames.
 
@@ -57,7 +57,7 @@ def save_animation(frames, name='test', format='mp4', fps=30):
         210, 160, 3), f"Expected frames with shape (N, 210, 160, 3), got {frames.shape}"
 
     # check generate directory
-    os.makedirs('generated', exist_ok=True)
+    os.makedirs(path, exist_ok=True)
 
     # check frames range
     if frames.max() > 1.0:
@@ -88,7 +88,8 @@ def save_animation(frames, name='test', format='mp4', fps=30):
     )
 
     # save animation
-    output_path = f"generated/{name}.{format}"
+    file_name = f"{name}.{format}"
+    output_path = os.path.join(path, file_name)
 
     try:
         if format == 'mp4':
