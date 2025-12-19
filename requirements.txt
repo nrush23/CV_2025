@@ -2,6 +2,7 @@ ale-py
 gymnasium
 keyboard
 numpy
+pygame
 torch
 tqdm
 matplotlib
